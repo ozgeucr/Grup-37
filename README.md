@@ -1,6 +1,6 @@
 # Grup 37
 
-## 👥 Takım Elemanları ve Rolleri
+##  Takım Elemanları ve Rolleri
 * **Buse Gülçen:** *
 * **Özge Uçar:** *
 * **Hatice Genç:**  *(
@@ -16,14 +16,14 @@ Geliştireceğimiz platform; etken madde bazlı ilaç etkileşim analizi yapan, 
 
 Sistem, farklı sağlık kuruluşlarındaki kopuk verilerin yarattığı tehlikeleri ortadan kaldırarak; doktor, eczacı ve hasta üçgeninde güvenli reçeteleme ve alternatif ilaç (muadil veya farklı etken madde) önerisi sağlayan entegre bir yapay zeka ağı sunmaktadır.
 
-## ✨ Ürün Özellikleri
+##  Ürün Özellikleri
 * Hastaların güncel ilaç listesi ve spesifik etken madde alerjilerinin tek bir merkezi profilde toplanması ve görüntülenmesi.
 * Yapay zeka destekli anlık **İlaç-İlaç** ve **İlaç-Alerji** etkileşim analizi (DDI - Drug-Drug Interaction).
 * Riskli etkileşim tespit edildiğinde, doktorlara ve eczacılara güvenli alternatif etken madde/ilaç önerisi sunulması.
 * Rol bazlı yetkilendirme mimarisi (Doktor/Eczacı için tam yetkili arayüz, Hasta için kendi verisini görüntüleme).
 * *Ar-Ge Aşaması:* Acil durumlarda (ambulans ve acil servis) hastanın kritik alerji ve ilaç verisine anında ulaşılmasını sağlayacak hızlı okuma entegrasyonu.
 
-## 👥 Hedef Kitle
+##  Hedef Kitle
 * Alerjik bünyeye sahip bireyler ve polifarmasi (çoklu ilaç) hastaları.
 * Güvenli reçeteleme yapmak isteyen hekimler ve klinikler.
 * İlaç temini sağlayan ve muadil kontrolü yapan eczacılar.
@@ -35,7 +35,7 @@ Sistem, farklı sağlık kuruluşlarındaki kopuk verilerin yarattığı tehlike
 
 ---
 
-# 🏃‍♂️ Sprint 1
+#  Sprint 1
 
 * **Backlog Düzeni ve Story Seçimleri:** İlk sprint için backlog'umuz veri altyapısının kurulması ve araştırma görevleri üzerine düzenlenmiştir. TİTCK ilaç veri setinin bulunup temizlenmesi, backend mimarisinin Python ile ayağa kaldırılması ve en verimli yapay zeka modelinin araştırılması ilk task'lar olarak belirlenmiştir.
 
