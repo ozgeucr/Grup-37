@@ -1,10 +1,10 @@
 # Grup 37
 
 ##  Takım Elemanları ve Rolleri
-* **Buse Gülçen:** Product Owner*
-* **Özge Uçar:** Scrum Master*
-* **Hatice Genç:**  Developer*
-* **Elif Sena Soysal:** Developer  *
+* **Buse Gülçen:** Product Owner
+* **Özge Uçar:** Scrum Master
+* **Hatice Genç:**  Developer
+* **Elif Sena Soysal:** Developer 
 
 ---
 
