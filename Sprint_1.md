@@ -5,10 +5,12 @@
 * **Daily Scrum:** Daily Scrum toplantılarımızın Slack üzerinden asenkron olarak ve gerekli durumlarda sesli toplantılarla yapılmasına karar verilmiştir.
 
 * **Sprint Board Update:** Sprint board'umuzun güncel durumu aşağıdaki gibidir:
-  *(Buraya Trello/Miro board'unuzun ekran görüntülerini ekleyin)*
 
-* **Ürün Durumu:** Bu sprintte kodlama, arayüz veya model eğitiminden ziyade veri sağlama stratejileri ve sistem mimarisi araştırmaları üzerine odaklanılmıştır. Projenin veri akış diyagramları, API entegrasyon senaryoları ve genel sistem mimarisi taslakları oluşturulmuştur.
-  `[Ekran Görüntüsü - Mimari Taslak / Wireframe]`
+<img width="846" height="621" alt="Ekran Resmi 2026-07-05 14 21 24" src="https://github.com/user-attachments/assets/50dcdaff-84e1-4d70-9419-674b4ad9485a" />
+
+* **Ürün Durumu:** Bu sprintte odak noktası kodlama ve arayüz tasarımı değil, veri mimarisi ve araştırmadır. Projenin genel iş akış diyagramları ve sistem mimarisi taslakları oluşturulmuştur.
+<img width="981" height="638" alt="Ekran Resmi 2026-07-05 14 20 54" src="https://github.com/user-attachments/assets/c015d54f-398b-4aec-a7e6-973e27bda70f" />
+
 
 * **Sprint Review:** 
   **Alınan Kararlar:** TİTCK ve OpenFDA entegrasyonuna dayalı veri mimarisi onaylanmış, DrugBank başvuru süreci tamamlanmış ve proje rolleri kesinleştirilmiştir. Geliştirme ortamları ve backend altyapısı için kullanılacak ana teknoloji (Python vb.) standartlaştırılmıştır.
