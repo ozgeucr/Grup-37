@@ -9,7 +9,7 @@
 ---
 
 ## Ürün İsmi
-**[Projenin İsmi]**
+**DrugSense**
 
 ## Ürün Açıklaması
 Geliştireceğimiz platform; etken madde bazlı ilaç etkileşim analizi yapan, alerjik reaksiyon risklerini ve çoklu ilaç kullanımından doğan "polifarmasi" tehlikesini proaktif olarak yöneten bir **Klinik Karar Destek Sistemidir**. 
@@ -29,7 +29,6 @@ Sistem, farklı sağlık kuruluşlarındaki kopuk verilerin yarattığı tehlike
 * İlaç temini sağlayan ve muadil kontrolü yapan eczacılar.
 * Acil müdahale ekipleri (Paramedikler).
 
-## 🔗 Product Backlog URL
 
 ---
 
