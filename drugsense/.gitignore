@@ -1,0 +1,14 @@
+# Google Cloud Credentials
+gcp_key.json
+
+# Python Caches & Virtual Environments
+__pycache__/
+*.pyc
+venv/
+.venv/
+env/
+.env
+
+# OS Files
+.DS_Store
+Thumbs.db
