@@ -1,0 +1,5 @@
+ingredient_1,ingredient_2,risk_level,mechanism_description,source
+Valproic Acid,Carbamazepine,Major,"Valproik asit karbamazepin aktif metabolitinin klirensini azaltarak toksisite riskini artırır.",Custom_Neurology
+Valproic Acid,Lamotrigine,Major,"Valproik asit lamotrijin metabolizmasını inhibe ederek lamotrijin yarı ömrünü iki katına çıkarır ve ciddi deri reaksiyonları (Stevens-Johnson sendromu) riskini artırır.",Custom_Neurology
+Carbamazepine,Lamotrigine,Moderate,"Karbamazepin, lamotrijin metabolizmasını indükleyerek lamotrijin serum konsantrasyonlarını düşürebilir ve nöbet kontrolünü azaltabilir.",Custom_Neurology
+Phenytoin,Valproic Acid,Major,"Valproik asit fenitoini protein bağlama bölgelerinden uzaklaştırır ve metabolizmasını inhibe ederek serbest fenitoin düzeylerini ve toksisitesini artırır.",Custom_Neurology
