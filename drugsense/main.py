@@ -3,14 +3,23 @@
 import os
 from fastapi import FastAPI, HTTPException
 from google.cloud import bigquery
+from drugsense.routes import drugs, doctor, pharmacist, patient
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "gcp_key.json"
 bq_client = bigquery.Client()
 
 app = FastAPI(title="DrugSense - Klinik Karar Destek Sistemi API")
+app.include_router(doctor.router, prefix="/doctor", tags=["Doctor"])
+app.include_router(drugs.router, prefix="/drugs", tags=["Drugs"])
+app.include_router(pharmacist.router, prefix="/pharmacist", tags=["Pharmacist"])
+app.include_router(patient.router, prefix="/patient", tags=["Patient"])
 
 PROJECT_ID = bq_client.project
 DATASET_ID = "drugsense_dataset"
+
+@app.get("/")
+def read_root():
+    return {"message": "DrugSense API sistemine hoş geldiniz. Güvenli reçeteleme için /docs adresine giderek arayüzü kullanabilirsiniz."}
 
 @app.get("/search-drug/{drug_name}")
 def search_drug(drug_name: str):
@@ -48,29 +57,3 @@ def search_drug(drug_name: str):
         "excipients": row.excipients
     }
 
-@app.get("/check-interactions")
-def check_interactions(ingredient_1: str, ingredient_2: str):
-    """İki etken madde arasındaki etkileşim riskini sorgular."""
-    
-    query = f"""
-        SELECT risk_level, mechanism_description, source 
-        FROM `{PROJECT_ID}.{DATASET_ID}.interactions`
-        WHERE 
-          (LOWER(ingredient_1) = @ing1 AND LOWER(ingredient_2) = @ing2) OR
-          (LOWER(ingredient_1) = @ing2 AND LOWER(ingredient_2) = @ing1)
-    """
-    
-    job_config = bigquery.QueryJobConfig(
-        query_parameters=[
-            bigquery.ScalarQueryParameter("ing1", "STRING", ingredient_1.lower()),
-            bigquery.ScalarQueryParameter("ing2", "STRING", ingredient_2.lower())
-        ]
-    )
-    
-    query_job = bq_client.query(query, job_config=job_config)
-    results = list(query_job.result())
-    
-    if not results:
-        return {"status": "Safe", "message": "Bilinen kritik bir etkileşim saptanmadı."}
-        
-    return [dict(row) for row in results]

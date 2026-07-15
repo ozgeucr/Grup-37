@@ -1,0 +1,19 @@
+medication_id,tc_no,drug_name,status,prescribed_date,prescribing_doctor
+M001,12345678901,Parol,Aktif,2026-07-10,Dr. Ahmet
+M002,22222222222,Depakin,Aktif,2026-07-01,Dr. Selim
+M003,22222222222,Lamictal,Aktif,2026-07-02,Dr. Selim
+M004,33333333333,Metformin,Aktif,2026-06-28,Dr. Emre
+M005,44444444444,Ibuprofen,Aktif,2026-07-05,Dr. Ayşe
+M006,44444444444,Prednisolone,Aktif,2026-07-04,Dr. Ayşe
+M007,44444444444,Tramadol,Aktif,2026-07-03,Dr. Ayşe
+M008,44444444444,Parol,Aktif,2026-07-01,Dr. Ayşe
+M009,55555555555,Carbamazepine,Aktif,2026-07-06,Dr. Deniz
+M010,66666666666,Codeine,Aktif,2026-07-02,Dr. Murat
+M011,66666666666,Ibuprofen,Aktif,2026-07-04,Dr. Murat
+M012,66666666666,Prednisolone,Aktif,2026-07-05,Dr. Murat
+M013,77777777777,Doxycycline,Aktif,2026-07-08,Dr. Can
+M014,88888888888,Warfarin,Aktif,2026-07-01,Dr. Seda
+M015,88888888888,Aspirin,Aktif,2026-07-02,Dr. Seda
+M016,12345678901,Amoxicillin,Tamamlandı,2026-05-12,Dr. Ahmet
+M017,22222222222,Parol,Tamamlandı,2026-06-01,Dr. Selim
+M018,44444444444,Naproxen,Tamamlandı,2026-05-22,Dr. Ayşe
