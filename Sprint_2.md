@@ -4,6 +4,8 @@
 
 * **Scrum ve Asenkron İletişim Süreci:** Sprint 1'de benimsediğimiz **Asenkron Check-in** modeli bu süreçte de hızımızı artırmış, özellikle hata ayıklama (debugging) aşamalarında takım içi iletişim kanalları aktif kullanılmıştır. Sprint 1 retrospektifinde aldığımız "eşli programlama (pair-programming)" kararı, kodlama standartlarının belirlenmesinde, Git repository temizliğinde ve karmaşık veri setlerinin birleştirilmesi (merge) stratejilerinde çok etkili olmuştur. Veritabanı şemalarındaki uyuşmazlıklardan kaynaklı (Blocker) durumlar, asenkron iletişim sayesinde anında raporlanmış ve eşzamanlı çözüm planları devreye sokulmuştur.
 
+     *(Takım iletişimine dair kesitler, toplantı notları ve araştırma kanıtlarına **[Sprint 2 İletişim ve Toplantı Kanıtları (Artifacts)](./Sprint_2_Attachments/README.md)** sayfamızdan ulaşabilirsiniz.)*
+
 * **Sprint Board Update:** Sprint board'umuzun Sprint 2 başlangıç durumu aşağıdaki gibidir.
   
 <img width="1080" height="796" alt="Sprint2_backlog1" src="https://github.com/user-attachments/assets/d5b3ed05-347e-4f9c-907d-b6b635a38f48" />
