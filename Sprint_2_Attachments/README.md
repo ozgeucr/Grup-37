@@ -23,7 +23,7 @@ Sistemi besleyecek verilerin nerede barındırılacağına dair platform (BigQue
 ### 3. Veritabanı Kurulumu ve Veri Hazırlığı
 Google Cloud BigQuery şemalarının oluşturulması, DDInter ve TİTCK ham veri setlerinin temizlenip birleştirilmesi ile GitHub repozitorisine entegrasyon aşamaları:
 * **Veri Temizliği, Birleştirme ve GitHub Entegrasyonu:**
-  ![Veri Hazırlığı](veri_hazırlığı.png)
+  ![Veri Hazırlığı](veri_hazirligi.png)
 
 ---
 
