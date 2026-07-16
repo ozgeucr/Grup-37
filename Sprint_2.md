@@ -11,9 +11,10 @@
 <img width="1080" height="796" alt="Sprint2_backlog1" src="https://github.com/user-attachments/assets/d5b3ed05-347e-4f9c-907d-b6b635a38f48" />
 
   Önceliklendirilen görevler takım kapasitesine göre işleme alınmıştır:
-  * **Tamamlanan ve Üzerinde Çalışılan Görevler (In Progress / Done):** Veri setindeki eksik değerlerin analiz edilmesi, işlenmesi ve temizleme stratejisinin belirlenmesi; Veri formatlarının standartlaştırılması, veri setinin backend için uygun formata dönüştürülmesi ve model eğitimine uygun hale getirilmesi; Veritabanı bağlantısının kurulması.
-  * **Planlanan Görevler (To Do / Backlog):** İlaç etkileşim analizi için uygun algoritmanın belirlenmesi ve algoritma seçeneklerinin karşılaştırılması; İlk model eğitiminin yapılması ve sürecin başlatılması; İlaç etkileşim sorgulama API'sinin ve İlaç/alerji etkileşim sorgulama API'sinin kodlanması; Kullanıcı kayıt ve profil API'sinin kodlanması; API uç noktalarının test edilmesi; Kullanıcı senaryolarının oluşturulması; Model sonuçlarının ve çıktılarının backend üzerinden erişilebilir hale getirilip entegre edilmesi.
-  *(Not: Board'un son görseli buraya eklenecektir.)*
+  * **Tamamlanan ve Üzerinde Çalışılan Görevler (In Progress / Done):** Veri setindeki eksik değerlerin analiz edilmesi, işlenmesi ve temizleme stratejisinin belirlenmesi; Veri formatlarının standartlaştırılması, veri setinin backend için uygun formata dönüştürülmesi ve model eğitimine uygun hale getirilmesi; Veritabanı (BigQuery) bağlantısının kurulması; Hasta profilini ve ilaç/alerji etkileşimlerini sorgulayan API uç noktalarının (FastAPI) kodlanması.
+  * **Planlanan Görevler (Sprint 3 / To Do):** İlaç etkileşim analizi için makine öğrenmesi algoritma seçeneklerinin karşılaştırılması; Hazırlanan konsolide veri seti ile yapay zeka modelinin eğitim (training) sürecinin başlatılması; Model çıktılarının API üzerinden erişilebilir hale getirilmesi; Kullanıcı senaryolarına uygun olarak Frontend (kullanıcı arayüzü) yapısının oluşturulması ve backend uç noktalarıyla entegrasyonu.
+  
+  *(Not: Board'un güncellenmiş son görseli buraya eklenecektir.)*
 
 * **Ürün Durumu:** Bu sprintte araştırma aşamasından geliştirme (development) ve veri mühendisliği aşamasına geçilmiştir.
   * **API Altyapısı:** FastAPI sunucusu başarılı bir şekilde çalışmakta ve `/docs` üzerinden Swagger UI dokümantasyonu sunulmaktadır.
