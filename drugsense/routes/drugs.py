@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from ..database import bq_client
 from ..models import MuadilResponse
+from google.cloud import bigquery
 
 router = APIRouter()
 
@@ -57,3 +58,57 @@ def get_muadiller(drug_name: str):
         active_ingredient=active_ingredient,
         alternative_drugs=alternative_drugs
     )
+
+@router.get("/check-drug-disease/{drug_name}/{icd10_code}")
+def check_drug_disease_risk(drug_name: str, icd10_code: str):
+    """Verilen ilacın, hastanın belirli bir tanısı/hastalığı (ICD-10) ile çelişip çelişmediğini kontrol eder."""
+    
+    # 1. İlacın etken maddesini bulalım
+    ing_query = f"""
+        SELECT active_ingredient 
+        FROM `{PROJECT_ID}.{DATASET_ID}.drugs`
+        WHERE LOWER(drug_name) = @drug_name
+        LIMIT 1
+    """
+    ing_config = bigquery.QueryJobConfig(query_parameters=[bigquery.ScalarQueryParameter("drug_name", "STRING", drug_name.lower())])
+    ing_res = list(bq_client.query(ing_query, job_config=ing_config).result())
+    
+    if not ing_res:
+        raise HTTPException(status_code=404, detail="İlaç veritabanında bulunamadı.")
+    
+    active_ingredient = ing_res[0].active_ingredient
+
+    # 2. drug_diseases tablosunda bu etken madde ve hastalık eşleşmesini sorgulayalım
+    check_query = f"""
+        SELECT disease_name, risk_level, warning_message
+        FROM `{PROJECT_ID}.{DATASET_ID}.drug_diseases`
+        WHERE LOWER(active_ingredient) = LOWER(@active_ingredient)
+          AND UPPER(icd10_code) = UPPER(@icd10_code)
+        LIMIT 1
+    """
+    check_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("active_ingredient", "STRING", active_ingredient),
+            bigquery.ScalarQueryParameter("icd10_code", "STRING", icd10_code)
+        ]
+    )
+    check_res = list(bq_client.query(check_query, job_config=check_config).result())
+    
+    if not check_res:
+        return {
+            "drug_name": drug_name,
+            "active_ingredient": active_ingredient,
+            "icd10_code": icd10_code,
+            "risk_status": "SAFE",
+            "warning": "Bu ilaç ile belirtilen hastalık arasında kayıtlı bir kontrendikasyon (risk) bulunamadı."
+        }
+        
+    risk_data = check_res[0]
+    return {
+        "drug_name": drug_name,
+        "active_ingredient": active_ingredient,
+        "icd10_code": icd10_code,
+        "disease_name": risk_data.disease_name,
+        "risk_status": risk_data.risk_level, # Örn: Major, Moderate
+        "warning": risk_data.warning_message
+    }
