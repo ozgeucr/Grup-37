@@ -1,0 +1,12 @@
+icd10_code,disease_name,active_ingredient,risk_level,warning_message
+G40,Epilepsi,Tramadol,Major,Epilepsi hastalarında nöbet eşiğini düşürerek nöbet riskini ciddi oranlarda artırır.
+K27,Peptik Ülser,Acetylsalicylic Acid,Major,Mide mukozasında ülser ve kanama riskini artırır; aktif ülser hastalarında kesinlikle kontrendikedir.
+K27,Peptik Ülser,Dexketoprofen,Major,Gastrointestinal sistemde mukoza hasarını tetikleyebilir ve ülser kanaması riskini artırır.
+K27,Peptik Ülser,Flurbiprofen,Major,Mide duvarını tahriş ederek peptik ülser ve kanama riskini artırır.
+K27,Peptik Ülser,Naproxen Sodium,Major,Gastrointestinal ülserasyon ve kanama riskini belirgin şekilde artırır.
+K27,Peptik Ülser,Diclofenac Potassium,Major,Mide mukozası üzerinde ülserojenik etkisi yüksektir.
+K27,Peptik Ülser,Diclofenac Sodium,Major,Mide mukozası üzerinde ülserojenik etkisi yüksektir.
+J45,Astım,Acetylsalicylic Acid,Major,Bronkospazmı (solunum yollarının daralmasını) tetikleyebilir ve aspirin astımı riski vardır.
+J45,Astım,Dexketoprofen,Moderate,Hassas astım hastalarında bronkospazmı tetikleme riski bulunabilir.
+I10,Hipertansiyon,Dexketoprofen,Moderate,Kan basıncını yükseltebilir ve antihipertansif ilaçların etkinliğini azaltabilir.
+I10,Hipertansiyon,Naproxen Sodium,Moderate,Sıvı tutulumuna yol açarak kan basıncı kontrolünü zorlaştırabilir.

@@ -22,6 +22,12 @@ class AllergyRecord(BaseModel):
     source: Optional[str] = "Sistem Kaydı"
 
 
+class DiseaseRecord(BaseModel):
+    icd10_code: str
+    disease_name: str
+    diagnosed_date: Optional[str] = None
+
+
 class MedicationRecord(BaseModel):
     drug_name: str
     status: str
@@ -35,5 +41,6 @@ class PatientProfile(BaseModel):
     age: int
     blood_type: Optional[str] = "Bilinmiyor"
     allergies: List[AllergyRecord] = []
+    diseases: List[DiseaseRecord] = []  # Eklendi: Hastalıklar listesi
     active_medications: List[MedicationRecord] = []
     past_medications: List[MedicationRecord] = []

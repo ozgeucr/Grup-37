@@ -3,16 +3,28 @@
 import os
 from fastapi import FastAPI, HTTPException
 from google.cloud import bigquery
-from drugsense.routes import drugs, doctor, pharmacist, patient
+from drugsense.routes import drugs, doctor, pharmacist, patient, emergency
+from datetime import datetime
+from pydantic import BaseModel
+
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "gcp_key.json"
 bq_client = bigquery.Client()
+
+class SideEffectReport(BaseModel):
+    report_id: str
+    patient_tc: str
+    drug_name: str
+    symptoms: str
+    severity: str
+    status: str = "İnceleniyor"
 
 app = FastAPI(title="DrugSense - Klinik Karar Destek Sistemi API")
 app.include_router(doctor.router, prefix="/doctor", tags=["Doctor"])
 app.include_router(drugs.router, prefix="/drugs", tags=["Drugs"])
 app.include_router(pharmacist.router, prefix="/pharmacist", tags=["Pharmacist"])
 app.include_router(patient.router, prefix="/patient", tags=["Patient"])
+app.include_router(emergency.router, prefix="/emergency", tags=["Emergency"])
 
 PROJECT_ID = bq_client.project
 DATASET_ID = "drugsense_dataset"
@@ -57,3 +69,29 @@ def search_drug(drug_name: str):
         "excipients": row.excipients
     }
 
+@app.post("/api/reports", tags=["Yan Etki Bildirimleri"])
+async def create_report(report: SideEffectReport):
+    # Dün oluşturduğumuz tablonun tam ID'si
+    table_id = "drugsense-503118.drugsense_dataset.side_effect_reports"
+    
+    # BigQuery'nin JSON formatında veri kabul etmesi için sözlük (dict) yapısına çeviriyoruz
+    row_to_insert = [
+        {
+            "report_id": report.report_id,
+            "patient_tc": report.patient_tc,
+            "drug_name": report.drug_name,
+            "symptoms": report.symptoms,
+            "severity": report.severity,
+            "report_date": datetime.utcnow().isoformat(), # Zaman damgasını otomatik atıyoruz
+            "status": report.status,
+        }
+    ]
+    
+    # Veriyi BigQuery'ye yazma işlemi (Burada bq_client kullanıyoruz)
+    errors = bq_client.insert_rows_json(table_id, row_to_insert)
+    
+    if errors == []:
+        return {"message": "Yan etki bildirimi başarıyla BigQuery'ye eklendi!"}
+    else:
+        # Hata durumunda detaylı bilgi dönüyoruz
+        raise HTTPException(status_code=500, detail=f"Kayıt eklenirken hata oluştu: {errors}")
