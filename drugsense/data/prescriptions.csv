@@ -1,0 +1,3 @@
+prescription_id,doctor_tc_no,patient_tc_no,drug_name,status,override_reason,created_at
+RX001,11111111111,12345678901,Depakin,DISPENSED,,2026-07-22 11:28:01.045587+00:00
+RX002,11111111111,98765432109,Brufen,PENDING,"Hasta ülser ama mide koruyucu ile birlikte yazıldı, takip edilecek.",2026-07-22 11:28:01.045587+00:00

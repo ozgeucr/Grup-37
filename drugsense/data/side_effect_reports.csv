@@ -1,0 +1,3 @@
+report_id,patient_tc,drug_name,symptoms,severity,report_date,status
+REP-001,12345678901,Parol,Hafif mide bulantısı,Düşük,2026-07-22 12:05:32.626054+00:00,İnceleniyor
+REP-002,10987654321,Aspirin,Hafif baş dönmesi,Düşük,2026-07-22 12:15:27.543254+00:00,İnceleniyor

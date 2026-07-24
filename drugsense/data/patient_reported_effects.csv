@@ -1,0 +1,3 @@
+report_id,patient_tc_no,drug_name,symptom,verification_status,reported_at
+REP001,98765432109,Aspirin,Şiddetli mide ağrısı ve yanma,PENDING,2026-07-22 11:28:01.045587+00:00
+REP002,55555555555,Parol,Ciltte döküntü ve kızarıklık,VERIFIED,2026-07-22 11:28:01.045587+00:00

@@ -1,8 +1,8 @@
 allergy_id,tc_no,allergen_name,severity,source
-A001,12345678901,Penicillin,Major,Hastane Kaydı
+A005,66666666666,Codeine,Moderate,Acil Servis
 A002,12345678901,Ibuprofen,Moderate,Doktor Girişi
 A003,33333333333,Sulfonamide,Major,Hasta Beyanı
-A004,55555555555,Lamotrigine,Major,Nöroloji
-A005,66666666666,Codeine,Moderate,Acil Servis
 A006,77777777777,Latex,Minor,Hasta Beyanı
+A001,12345678901,Penicillin,Major,Hastane Kaydı
 A007,88888888888,Aspirin,Major,Hastane Kaydı
+A004,55555555555,Lamotrigine,Major,Nöroloji

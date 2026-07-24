@@ -1,0 +1,115 @@
+active_ingredient,interacting_food,risk_level,warning_message
+Isotretinoin,A Vitamini (Havuç Özütü/Takviyeler),Major,İlaç zaten A vitamini derivesidir. Ekstra A vitamini alımı şiddetli karaciğer toksisitesi ve beyin basıncında artışa yol açar.
+Metronidazole,Alkol,Major,Alkol ile kullanımı şiddetli bulantı kusma baş ağrısı ve çarpıntıya (Disülfiram benzeri reaksiyon) neden olur.
+Acetaminophen,Alkol,Major,İlacın alkol ile uzun süreli birlikte kullanımı karaciğer toksisitesi (hepatotoksisite) riskini ciddi şekilde artırır.
+Dexketoprofen,Alkol,Major,NSAİİ grubu ağrı kesicilerle alkol kullanımı mide kanaması ve gastrointestinal ülserasyon riskini belirgin şekilde artırır.
+Flurbiprofen,Alkol,Major,Alkol tüketimi ile birlikte alındığında mide ve bağırsak kanaması riski artar.
+Ibuprofen,Alkol,Major,Alkol tüketimi ile birlikte alındığında mide zarı tahrişi ve kanama riski artar.
+Naproxen,Alkol,Major,Alkol ile eşzamanlı kullanım ciddi gastrointestinal kanama riskine yol açar.
+Diclofenac,Alkol,Major,NSAİİ grubu ilaçlarla alkol tüketimi mide mukozasını hasara uğratarak kanama riskini ciddi oranda artırır.
+Meloxicam,Alkol,Major,Mide ve bağırsak kanaması riskini artırır. Tedavi süresince alkol alınmamalıdır.
+Ketorolac,Alkol,Major,Çok güçlü bir NSAİİ olduğu için alkolle alımı anında mide kanaması ve perforasyon (delinme) riski yaratır.
+Celecoxib,Alkol,Major,Mide koruyucu etkili bir NSAİİ olmasına rağmen alkolle alımı gastrointestinal kanama riskini tetikler.
+Valproic Acid,Alkol,Major,Alkol ile birlikte alımı merkezi sinir sistemi depresyonunu şiddetlendirir ve karaciğer toksisitesi riskini artırır.
+Phenytoin,Alkol,Major,Alkol ilacın metabolizmasını bozarak nöbet kontrolünü zorlaştırır ve toksisite riskini yükseltir.
+Topiramate,Alkol,Major,Bilişsel yavaşlama uyku hali ve sersemlik gibi merkezi sinir sistemi yan etkilerini tehlikeli derecede artırır.
+Duloxetine,Alkol,Major,Aşırı alkol tüketimi ile birlikte kullanımı ciddi karaciğer hasarı riskini (hepatotoksisite) artırır.
+Mirtazapine,Alkol,Major,İlacın zaten yüksek olan sedatif (uyutucu) etkisi alkolle birleştiğinde tehlikeli boyutlara ulaşır.
+Bupropion,Alkol,Major,Alkol kullanımı ilacın nöbet eşiğini düşürme riskini tetikler. Ani nöbet geçirme tehlikesi yaratır.
+Metformin,Alkol,Major,Alkol ile birlikte kullanımı kanda ölümcül olabilen laktik asidoz birikimi riskini artırır ve hipoglisemi yapabilir.
+Glimepiride,Alkol,Major,Sülfonilüre grubu ilaçlarla alkol tüketimi tehlikeli hipoglisemi ataklarına (ani şeker düşmesi) yol açar.
+Gliclazide,Alkol,Major,Alkol karaciğerin şeker üretmesini engelleyerek ilacın hipoglisemi riskini hayati seviyede artırır.
+Insulin,Alkol,Major,Alkol tüketimi karaciğer glikoz üretimini baskılar. İnsülin ile alındığında saatler sonra bile gecikmiş şiddetli hipoglisemi yaratabilir.
+Clonidine,Alkol,Major,Hipertansiyon ilacı alkolle birleştiğinde tehlikeli boyutlarda merkezi sinir sistemi çökmesi ve hipotansiyon oluşturur.
+Alprazolam,Alkol,Major,Alkol ile kombine kullanımı şiddetli solunum depresyonu koma ve ölüme yol açabilir.
+Diazepam,Alkol,Major,Alkol ilacın merkezi sinir sistemini baskılayıcı etkisini katlayarak solunum durmasına neden olabilir.
+Clonazepam,Alkol,Major,Sedatif etkilerin aşırı artmasına bağlı tehlikeli motor kayıplar ve solunum depresyonu riski yaratır.
+Zolpidem,Alkol,Major,Uyku ilacı ile alkolün birlikte kullanımı ani solunum durması uyurgezerlik ve koma riskini ekstrem düzeyde artırır.
+Haloperidol,Alkol,Major,Alkol ilacın sedatif etkilerini ciddi oranda artırır motor refleksleri tehlikeli derecede zayıflatır.
+Tramadol,Alkol,Major,Narkotik benzeri ağrı kesici ile alkol alımı şiddetli solunum depresyonu koma ve ölüm riski oluşturur.
+Codeine,Alkol,Major,Opiyat türevi öksürük ve ağrı kesicilerle alkol kullanımı hayati tehlike yaratan solunum durmasına neden olabilir.
+Fentanyl,Alkol,Major,Sentetik opioid ve alkol kombinasyonu solunum durması (respiratuvar depresyon) ve ölüm açısından son derece risklidir.
+Ketoconazole,Alkol,Major,Birlikte kullanımı ciddi karaciğer hasarı ve disülfiram benzeri şiddetli reaksiyonlara neden olabilir.
+Prednisone,Alkol,Major,Kortizon türevi ilaçla alkol alımı mide mukozasını hızla aşındırarak ani mide kanaması ve ülserasyon yaratır.
+Dexamethasone,Alkol,Major,Bağışıklık sistemini baskılayan kortikosteroid alkolle birleştiğinde hem karaciğer enzimlerini yorar hem de mide delinmesi riski oluşturur.
+Gabapentin,Alkol,Moderate,Alkol kullanımı ilacın sedatif etkilerini artırarak motor becerilerde zayıflama ve uyku hali yapar.
+Pregabalin,Alkol,Moderate,Alkol ile birleştiğinde aşırı sedasyon baş dönmesi ve solunum yavaşlaması görülebilir.
+Escitalopram,Alkol,Moderate,Alkol ile birlikte kullanımı merkezi sinir sistemi depresyonunu (uyku hali sersemlik) artırabilir.
+Fluoxetine,Alkol,Moderate,Antidepresan etkiyi bozabilir ve merkezi sinir sistemi depresyonu riskini artırabilir.
+Paroxetine,Alkol,Moderate,Sersemlik motor becerilerde zayıflama ve uyku hali gibi yan etkileri şiddetlendirebilir.
+Venlafaxine,Alkol,Moderate,Alkol ile birleşimi bilişsel ve motor fonksiyonlarda ciddi bozulmalara yol açabilir.
+Pioglitazone,Alkol,Moderate,Hipoglisemi riskini artırmanın yanı sıra karaciğer fonksiyonları üzerinde olumsuz ek strese yol açabilir.
+Propranolol,Alkol,Moderate,Alkol ilacın vücuttan atılım hızını değiştirerek tansiyon dalgalanmalarına neden olur.
+Sildenafil,Alkol,Moderate,Eş zamanlı kullanımı kan basıncında ani düşüşlere (hipotansiyon) ve baş dönmesine neden olabilir.
+Furosemide,Alkol,Moderate,İdrar söktürücü ilaç alkol ile birleştiğinde dehidrasyon ve kan basıncında aşırı düşüş riskini artırır.
+Hydrochlorothiazide,Alkol,Moderate,Ortostatik hipotansiyon (ayağa kalkınca tansiyon düşmesi) riskini artırarak bayılmalara neden olabilir.
+Erythromycin,Asidik İçecekler (Meyve Suları),Moderate,Meyve suları ve asidik içecekler ilacın parçalanmasına neden olarak etkinliğini azaltır.
+Levodopa,Demir Takviyeleri,Moderate,Demir ilaca bağırsakta bağlanarak emilimini önemli ölçüde düşürür.
+Atenolol,Elma / Portakal / Greyfurt Suyu,Moderate,Meyve suları OATP enzimlerini bloke ederek tansiyon ilacının bağırsaktan emilimini ciddi oranda düşürür.
+Fexofenadine,Elma / Portakal / Greyfurt Suyu,Moderate,Meyve suları bağırsaktaki taşıyıcı proteinleri (OATP) bloke ederek alerji ilacının emilimini yüzde 70 oranında azaltır.
+Atorvastatin,Greyfurt Suyu,Major,Greyfurt suyu CYP3A4 enzimini inhibe ederek ilacın kan düzeyini toksik seviyelere çıkarır. Kas yıkımı (rabdomiyoliz) riski yüksektir.
+Simvastatin,Greyfurt Suyu,Major,Greyfurt suyu ilacın metabolizmasını bloke ederek kas yıkımı (rabdomiyoliz) riskini yükseltir.
+Eplerenone,Greyfurt Suyu,Major,Greyfurt suyu ilacın kan seviyesini artırarak şiddetli hiperkalemi ve ritim bozukluğu riski yaratır.
+Carbamazepine,Greyfurt Suyu,Major,Greyfurt suyu ilacın kan seviyesini artırarak nörolojik toksisite (baş dönmesi sersemlik ataksi) riskini yükseltir.
+Amiodarone,Greyfurt Suyu,Major,Greyfurt suyu ilacın atılımını yavaşlatarak ciddi ve potansiyel olarak ölümcül kalp ritim bozukluklarına yol açabilir.
+Rivaroxaban,Greyfurt Suyu,Major,Greyfurt suyu kan sulandırıcı ilacın vücutta birikmesine neden olarak hayati kanama riskini artırır.
+Apixaban,Greyfurt Suyu,Major,İlacın metabolizmasını yavaşlatıp kan seviyelerini artırarak tehlikeli kanama ataklarına yol açabilir.
+Colchicine,Greyfurt Suyu,Major,İlacın kan seviyesini toksik düzeylere çıkararak kas hasarına ve çoklu organ yetmezliğine neden olabilir.
+Clarithromycin,Greyfurt Suyu,Major,Enzim inhibisyonu nedeniyle kandaki antibiyotik seviyesini toksik düzeylere çıkarıp ciddi kalp ritim bozuklukları yaratabilir.
+Nifedipine,Greyfurt Suyu,Major,Greyfurt suyu ilacın biyoyararlanımını tehlikeli derecede artırarak şiddetli hipotansiyon ve baş dönmesi yapar.
+Diltiazem,Greyfurt Suyu,Major,Enzim inhibisyonu ile ilacın kan seviyeleri fırlar bradikardi (kalp atışında yavaşlama) ve hipotansiyon riski yaratır.
+Verapamil,Greyfurt Suyu,Major,İlacın vücuttan atılımını engelleyerek toksisite kalp blokajı ve hipotansiyon riskini hayati seviyede artırır.
+Quetiapine,Greyfurt Suyu,Major,Greyfurt suyu ilacın toksisitesini artırarak aşırı sedasyon ve tehlikeli ritim bozukluklarına (QT uzaması) neden olabilir.
+Aripiprazole,Greyfurt Suyu,Major,Enzim inhibisyonu nedeniyle ilacın kandaki miktarı artar yan etkiler şiddetlenir.
+Fentanyl,Greyfurt Suyu,Major,Greyfurt suyu fentanylin vücuttan atılmasını engelleyerek ölümcül doz aşımı (toksisite) belirtilerine yol açar.
+Cyclosporine,Greyfurt Suyu,Major,Organ reddini önleyen immünosüpresan ilacın kan seviyesini böbrekleri iflas ettirecek toksik düzeylere çıkarır.
+Tacrolimus,Greyfurt Suyu,Major,İlacın biyoyararlanımını devasa boyutta artırarak akut böbrek yetmezliği ve nörolojik toksisite yapar.
+Itraconazole,Greyfurt Suyu,Major,Mantar ilacının metabolizmasını bloke ederek karaciğer toksisitesi ve ritim bozukluğu tehlikesi yaratır.
+Budesonide,Greyfurt Suyu,Major,Özellikle ağızdan alınan kapsül formlarında ilacın kan seviyesini aşırı yükselterek böbreküstü bezi baskılanmasına yol açar.
+Sertraline,Greyfurt Suyu,Moderate,Greyfurt suyu antidepresanın kan seviyesini artırarak yan etkileri (serotonin sendromu riski) şiddetlendirebilir.
+Clopidogrel,Greyfurt Suyu,Moderate,Greyfurt suyu ilacın aktif formuna dönüşümünü engelleyerek kan sulandırıcı etkinliğini azaltabilir.
+Dabigatran,Greyfurt Suyu,Moderate,Enzim metabolizmasını etkileyerek kan sulandırıcı etkide beklenmeyen dalgalanmalar yaratabilir.
+Amlodipine,Greyfurt Suyu,Moderate,Greyfurt suyu kalsiyum kanal blokerinin kan düzeyini artırarak ani tansiyon düşüklüğüne (hipotansiyon) neden olabilir.
+Sildenafil,Greyfurt Suyu,Moderate,İlacın kandaki yoğunluğunu artırarak baş ağrısı kızarma ve hipotansiyon yan etkilerini şiddetlendirir.
+Tadalafil,Greyfurt Suyu,Moderate,Enzim inhibisyonu nedeniyle ilacın vücutta kalış süresini uzatır yan etki riskini artırır.
+Methylprednisolone,Greyfurt Suyu,Moderate,İlacın kan düzeyini hafif-orta derecede artırarak kortizon yan etkilerini (kilo alımı şeker yükselmesi) şiddetlendirebilir.
+Pantoprazole,Gıda,Moderate,Mide koruyucular besinlerle alındığında etkinliği azalır. Kahvaltıdan en az 30 dakika önce aç karnına alınmalıdır.
+Omeprazole,Gıda,Moderate,Besinler emilimi yavaşlatır. Maksimum etkinlik için yemekten önce alınmalıdır.
+Lansoprazole,Gıda,Moderate,Gıda ile alımı emilimi azaltır. Mide koruyucu etkisinin tam olması için aç karnına tüketilmelidir.
+Esomeprazole,Gıda,Moderate,Besinlerle birlikte alınması biyo-yararlanımını düşürür. Yemeklerden en az 1 saat önce alınmalıdır.
+Warfarin,K Vitamini (Ispanak - Brokoli - Lahana),Major,K Vitamini içeren besinler ilacın kan sulandırıcı etkisini tersine çevirerek pıhtılaşma riskini artırır. Diyet sabit tutulmalıdır.
+Theophylline,Kafein (Kahve - Çay - Kola),Moderate,Kafein ilacın yan etkilerini (çarpıntı sinirlilik uykusuzluk) artırabilir. Tüketim sınırlandırılmalıdır.
+Albuterol,Kafein (Kahve - Çay - Kola),Moderate,Bronş genişletici ilaç kafeinle birleştiğinde kalp atış hızını (taşikardi) ve titremeyi belirgin şekilde artırır.
+Salmeterol,Kafein (Kahve - Çay - Kola),Moderate,Kafein tüketimi ilacın sempatik sinir sistemi üzerindeki uyarıcı etkisini katlayarak çarpıntı yapar.
+Clozapine,Kafein (Kahve - Çay),Moderate,Yüksek miktarda kafein şizofreni ilacının kan düzeylerini artırarak yan etki profilini ağırlaştırabilir.
+Cimetidine,Kafein (Kahve - Çay),Moderate,Mide ilacı kafeinin vücuttan atılmasını zorlaştırır çarpıntı ve sinirlilik gibi uyarıcı etkileri uzatır.
+Methotrexate,Kafein / Alkol,Major,Alkol karaciğer toksisitesini artırır. Aşırı kafein tüketimi ise ilacın etkinliğini azaltabilir.
+Levothyroxine,Kalsiyum / Demir / Soya,Major,Kalsiyum ve demir takviyeleri ile soya ürünleri tiroid ilacının emilimini engeller. İlaç aç karnına ve diğerlerinden 4 saat ayrı alınmalıdır.
+Eplerenone,Potasyum (Muz - Ispanak),Major,Doğrudan potasyum tutucu etki gösterdiği için potasyum takviyeleri veya zengin diyet ölümcül sonuçlar doğurabilir.
+Lisinopril,Potasyum (Muz - Ispanak),Moderate,ACE inhibitörleri potasyum seviyelerini artırabilir. Aşırı potasyum tüketimi hiperkalemi riskini yükseltir.
+Enalapril,Potasyum (Muz - Ispanak),Moderate,ACE inhibitörleri potasyum seviyelerini artırabilir. Yüksek potasyumlu diyetten kaçınılmalıdır.
+Ramipril,Potasyum (Muz - Ispanak),Moderate,ACE inhibitörleri ile yüksek potasyum tüketimi hiperkalemi (kanda yüksek potasyum) riski oluşturur.
+Valsartan,Potasyum (Muz - Ispanak),Moderate,ARB grubu ilaçlar potasyum seviyelerini artırabilir. Hiperkalemi açısından diyet takibi önerilir.
+Losartan,Potasyum (Muz - Ispanak),Moderate,İlaç potasyum düzeyini yükseltebileceğinden potasyumdan zengin gıdalarla dikkatli tüketilmelidir.
+Irbesartan,Potasyum (Muz - Ispanak),Moderate,Potasyum tutulumunu artırabilir. Aşırı potasyum tüketimi hiperkalemi riski yaratır.
+Candesartan,Potasyum (Muz - Ispanak),Moderate,Kan basıncı ilacı potasyum tutulumunu artırır. Diyetteki potasyum miktarı izlenmelidir.
+Spironolactone,Potasyum (Muz - Portakal - Kayısı),Major,İlaç potasyum tutucu özelliktedir. Potasyumdan zengin diyet ölümcül kalp ritim bozukluklarına (hiperkalemi) neden olabilir.
+Lithium,Sodyum (Düşük Tuzlu Diyet),Major,Sodyum alımının aniden azaltılması lityumun böbreklerden atılımını engelleyerek zehirlenmeye neden olur. Su ve tuz alımı sabit kalmalıdır.
+Alendronate,Su Dışındaki Her Türlü İçecek ve Gıda,Major,İlaç sadece saf su ile alınmalıdır. Meyve suyu kahve veya gıdalarla alınması ilacın emilimini yüzde 60 oranında azaltır.
+Ibandronate,Su Dışındaki Her Türlü İçecek ve Gıda,Major,Kemik erimesi ilacı gıdalarla alındığında emilimi tamamen durur. Mutlaka sabah aç karnına saf su ile alınmalıdır.
+Risedronate,Su Dışındaki Her Türlü İçecek ve Gıda,Major,Gıda ve içecekler biyo-yararlanımını düşürür. İlaç alındıktan sonra en az 30 dakika hiçbir şey yenmemelidir.
+Ciprofloxacin,Süt ve Süt Ürünleri (Kalsiyum),Moderate,Kalsiyum ilaca bağlanarak emilimini önemli ölçüde engeller. İlaç süt ürünlerinden en az 2 saat önce veya 4 saat sonra alınmalıdır.
+Tetracycline,Süt ve Süt Ürünleri (Kalsiyum),Moderate,Kalsiyum ilaca bağlanarak emilimini engeller ve antibiyotiğin etkinliğini düşürür.
+Levofloxacin,Süt ve Süt Ürünleri (Kalsiyum),Moderate,Kalsiyum ve magnezyum içeren gıdalar emilimi azaltır. İlaçtan 2 saat önce veya sonra alınmalıdır.
+Moxifloxacin,Süt ve Süt Ürünleri (Kalsiyum),Moderate,Kalsiyum içeren ürünlerle birlikte kullanımı antibiyotiğin etkinliğini düşürür.
+Doxycycline,Süt ve Süt Ürünleri (Kalsiyum/Demir),Moderate,Süt ürünleri ve demir takviyeleri ilacın emilimini bozar. Birlikte tüketilmemelidir.
+Zinc,Süt Ürünleri / Kepekli Gıdalar,Moderate,Çinko emilimi kalsiyum ve fitat (kepek) varlığında büyük ölçüde engellenir. Mümkünse aç karnına tüketilmelidir.
+Phenelzine,Tiramin (Yıllanmış Peynir - Şarap),Major,Tiramin içeren fermente gıdalar MAO inhibitörleri ile birleştiğinde ölümcül olabilen ani hipertansif krize yol açar.
+Selegiline,Tiramin (Yıllanmış Peynir - Şarap),Major,Tiramin içeren fermente gıdalarla alımı şiddetli hipertansif krize (kan basıncı fırlamasına) yol açabilir.
+Linezolid,Tiramin (Yıllanmış Peynir - Şarap),Major,Antibiyotik olmasına rağmen zayıf MAO inhibitörü özelliği gösterir. Tiraminli gıdalarla hipertansif kriz yaratabilir.
+Isoniazid,Tiramin / Histamin (Balık - Peynir),Major,Tüberküloz ilacı tiramin ve histamin metabolizmasını bozar. Şiddetli baş ağrısı çarpıntı ve kızarıklık yapabilir.
+Digoxin,Yüksek Lifli Gıdalar (Yulaf - Kepek),Moderate,Yüksek lifli diyet ilacın emilimini azaltarak kalp yetmezliği tedavisinin etkinliğini düşürebilir.
+Levodopa,Yüksek Proteinli Öğünler,Moderate,Aminoasitler ilacın bağırsaktan emilimini ve beyne geçişini engeller. İlaç proteinli öğünlerden yarım saat önce alınmalıdır.
+Allopurinol,Yüksek Pürinli Gıdalar (Kırmızı Et - Sakatat),Major,Yüksek pürin içeren gıdalar ürik asit seviyelerini artırarak ilacın gut hastalığını önleyici etkisini azaltır.
+Probenecid,Yüksek Pürinli Gıdalar (Kırmızı Et - Sakatat),Major,İlacın ürik asit atıcı etkisini bloke eder. Diyet kontrolü zorunludur.
+Ferrous Sulfate,Çay / Kahve / Süt,Major,Tanenler kafein ve kalsiyum demir ilacına midede yapışarak emilimini tamamen engeller. Sadece su veya C vitamini ile alınmalıdır.

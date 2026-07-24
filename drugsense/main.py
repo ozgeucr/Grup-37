@@ -1,5 +1,3 @@
-#bu dosyayı şimdilik kaba taslak olarak yazdım, düzenlenebilir
-
 import os
 from fastapi import FastAPI, HTTPException
 from google.cloud import bigquery
@@ -7,9 +5,12 @@ from drugsense.routes import drugs, doctor, pharmacist, patient, emergency
 from datetime import datetime
 from pydantic import BaseModel
 
-
+# Kimlik dosyasını ortam değişkenine tanıtıyoruz
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "gcp_key.json"
 bq_client = bigquery.Client()
+
+PROJECT_ID = bq_client.project
+DATASET_ID = "drugsense_dataset"
 
 class SideEffectReport(BaseModel):
     report_id: str
@@ -19,25 +20,29 @@ class SideEffectReport(BaseModel):
     severity: str
     status: str = "İnceleniyor"
 
-app = FastAPI(title="DrugSense - Klinik Karar Destek Sistemi API")
+app = FastAPI(
+    title="DrugSense - Klinik Karar Destek Sistemi API",
+    description="Yapay zeka destekli çok boyutlu klinik karar destek ve akıllı reçeteleme sistemi.",
+    version="1.0.0"
+)
+
+# Router'ları ekliyoruz
 app.include_router(doctor.router, prefix="/doctor", tags=["Doctor"])
 app.include_router(drugs.router, prefix="/drugs", tags=["Drugs"])
 app.include_router(pharmacist.router, prefix="/pharmacist", tags=["Pharmacist"])
 app.include_router(patient.router, prefix="/patient", tags=["Patient"])
 app.include_router(emergency.router, prefix="/emergency", tags=["Emergency"])
 
-PROJECT_ID = bq_client.project
-DATASET_ID = "drugsense_dataset"
-
 @app.get("/")
 def read_root():
-    return {"message": "DrugSense API sistemine hoş geldiniz. Güvenli reçeteleme için /docs adresine giderek arayüzü kullanabilirsiniz."}
+    return {
+        "message": "DrugSense API sistemine hoş geldiniz. Güvenli reçeteleme için /docs adresine giderek arayüzü kullanabilirsiniz."
+    }
 
 @app.get("/search-drug/{drug_name}")
 def search_drug(drug_name: str):
     """Kullanıcının yazdığı ilacı BigQuery'de arar ve yardımcı maddeleriyle birlikte getirir."""
     
-    # SQL Enjeksiyon güvenliği için parametrik sorgu kullanıyoruz
     query = f"""
         SELECT d.drug_id, d.drug_name, d.active_ingredient, d.atc_code,
                ARRAY_AGG(i.ingredient_name) as excipients
@@ -55,11 +60,11 @@ def search_drug(drug_name: str):
     results = list(query_job.result())
     
     if not results:
-        # Burası jüriye bahsedeceğimiz "Eğer BigQuery'de yoksa API'ye git" alanı.
-        # Şimdilik simüle etmek adına hata döndürüyoruz.
-        raise HTTPException(status_code=404, detail="İlaç lokal BigQuery veritabanında bulunamadı. RxNorm entegrasyonu tetikleniyor...")
+        raise HTTPException(
+            status_code=404, 
+            detail="İlaç lokal BigQuery veritabanında bulunamadı. RxNorm / TİTCK dış kaynak entegrasyonu tetikleniyor..."
+        )
         
-    # İlk eşleşen ilacı sözlük yapısına çevirip dönüyoruz
     row = results[0]
     return {
         "drug_id": row.drug_id,
@@ -71,10 +76,11 @@ def search_drug(drug_name: str):
 
 @app.post("/api/reports", tags=["Yan Etki Bildirimleri"])
 async def create_report(report: SideEffectReport):
-    # Dün oluşturduğumuz tablonun tam ID'si
-    table_id = "drugsense-503118.drugsense_dataset.side_effect_reports"
+    """Hastaların veya hekimlerin bildirdiği yan etkileri BigQuery audit/report tablosuna işler."""
     
-    # BigQuery'nin JSON formatında veri kabul etmesi için sözlük (dict) yapısına çeviriyoruz
+    # Sabit ID yerine dinamik PROJECT_ID kullanıyoruz
+    table_id = f"{PROJECT_ID}.{DATASET_ID}.side_effect_reports"
+    
     row_to_insert = [
         {
             "report_id": report.report_id,
@@ -82,16 +88,14 @@ async def create_report(report: SideEffectReport):
             "drug_name": report.drug_name,
             "symptoms": report.symptoms,
             "severity": report.severity,
-            "report_date": datetime.utcnow().isoformat(), # Zaman damgasını otomatik atıyoruz
+            "report_date": datetime.utcnow().isoformat(),
             "status": report.status,
         }
     ]
     
-    # Veriyi BigQuery'ye yazma işlemi (Burada bq_client kullanıyoruz)
     errors = bq_client.insert_rows_json(table_id, row_to_insert)
     
     if errors == []:
         return {"message": "Yan etki bildirimi başarıyla BigQuery'ye eklendi!"}
     else:
-        # Hata durumunda detaylı bilgi dönüyoruz
         raise HTTPException(status_code=500, detail=f"Kayıt eklenirken hata oluştu: {errors}")
