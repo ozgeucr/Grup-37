@@ -1,0 +1,4 @@
+log_id,actor_tc_no,action_type,target_tc_no,timestamp,details
+LOG001,11111111111,VIEW_PROFILE,12345678901,2026-07-22 11:28:01.045587+00:00,Rutin poliklinik muayenesi.
+LOG002,44444444444,EMERGENCY_ACCESS,12345678901,2026-07-22 11:28:01.045587+00:00,Nöbet geçiren hastaya ambulans müdahalesi (Camı Kır).
+EMG-3EA6BACA,44444444444,EMERGENCY_ACCESS,12345678901,2026-07-22 11:46:30.528272+00:00,"Paramedik Fatma Şahin tarafından acil durum tetiklendi. Gerekçe: Hasta bilincini kaybetmiş, nöbet geçiriyor."

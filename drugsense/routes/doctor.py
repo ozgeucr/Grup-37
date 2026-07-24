@@ -136,6 +136,57 @@ def check_drug_disease_contraindications(new_ing: str, patient_diseases: list) -
         })
     return conflicts
 
+
+# --- YENİ EKLENEN GÜVENLİK FİLTRELERİ ---
+
+def check_food_interactions(new_ing: str) -> list:
+    """BigQuery'deki drug_foods tablosundan ilacın besin etkileşimlerini çeker."""
+    if not new_ing:
+        return []
+
+    query = f"""
+        SELECT interacting_food, risk_level, warning_message
+        FROM `{PROJECT_ID}.{DATASET_ID}.drug_foods`
+        WHERE LOWER(active_ingredient) = LOWER(@new_ing)
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[bigquery.ScalarQueryParameter("new_ing", "STRING", new_ing.lower())]
+    )
+    res = list(bq_client.query(query, job_config=job_config).result())
+    
+    warnings = []
+    for row in res:
+        warnings.append({
+            "food": row.interacting_food,
+            "level": row.risk_level,
+            "message": row.warning_message
+        })
+    return warnings
+
+def check_therapeutic_duplication(new_ing: str, patient_active_ings: list[str]) -> bool:
+    """Aynı etken maddenin mükerrer (duplikasyon) yazılıp yazılmadığını kontrol eder."""
+    if not new_ing or not patient_active_ings:
+        return False
+    return new_ing.lower() in [ing.lower() for ing in patient_active_ings if ing]
+
+def check_age_warnings(new_ing: str, patient_age: int) -> str:
+    """Etken madde bazlı yaş risklerini (pediatrik/geriatrik) kontrol eder."""
+    if not new_ing or patient_age is None:
+        return ""
+
+    ing_lower = new_ing.lower()
+    
+    if patient_age < 16 and "acetylsalicylic acid" in ing_lower:
+        return "KRİTİK UYARI (Pediatrik): 16 yaş altı çocuklarda Reye Sendromu riski nedeniyle kesinlikle kontrendikedir."
+    
+    if patient_age >= 65:
+        if any(nsaid in ing_lower for nsaid in ["dexketoprofen", "flurbiprofen", "naproxen", "ibuprofen", "diclofenac"]):
+            return "Geriatrik Uyarı (65+): NSAİİ kullanımı mide kanaması ve böbrek yetmezliği riskini artırır. En düşük etkili doz tercih edilmelidir."
+        if "tramadol" in ing_lower:
+            return "Geriatrik Uyarı (65+): Solunum depresyonu ve düşme riski artar. Doz ayarlaması gereklidir."
+    return ""
+
+
 # --- ENDPOINTLER ---
 
 @router.get("/check-and-suggest/{drug_1}/{drug_2}")
@@ -151,7 +202,7 @@ def check_and_suggest(drug_1: str, drug_2: str):
 
 @router.post("/doctor/prescribe-and-analyze")
 def prescribe_and_analyze(request: PrescriptionRequest):
-    """Sistemin kalbi: Reçeteleme ve Çok Boyutlu Güvenlik Duvarı (İlaç-İlaç, Alerji, İlaç-Hastalık)."""
+    """Sistemin kalbi: Reçeteleme ve Çok Boyutlu Güvenlik Duvarı (İlaç-İlaç, Alerji, Hastalık, Yaş, Besin, Duplikasyon)."""
     
     # 1. Hata Yönetimi: Hasta profili kontrolü
     try:
@@ -179,25 +230,50 @@ def prescribe_and_analyze(request: PrescriptionRequest):
 
     report = {
         "patient": patient.full_name,
+        "patient_age": patient.age,
         "new_drug": request.new_drug_name,
         "overall_status": "SAFE",
         "is_prescription_blocked": False,
         "interaction_count": 0,
         "allergy_count": 0,
         "disease_conflict_count": 0,
+        "food_warning_count": 0,
         "polypharmacy": len(patient.active_medications) >= 5,
         "interactions": [],
         "allergy_warnings": [],
         "disease_warnings": [],
+        "food_warnings": [],
         "suggestions": [],
         "recommendation": "Reçete güvenle oluşturulabilir."
     }
 
     # Polifarmasi Kontrolü
     if report["polypharmacy"]:
-        report["suggestions"].append("Hastada polifarmasi riski bulunmaktadır.")
+        report["suggestions"].append("Hastada polifarmasi riski (5+ ilaç kullanımı) bulunmaktadır.")
 
-    # 2. ALERJİ KONTROLÜ
+    # 2. AYNI GRUP İLAÇ (DUPLİKASYON) KONTROLÜ
+    patient_ings = [
+        ingredients_dict.get(drug.lower()) 
+        for drug in patient_drug_names 
+        if ingredients_dict.get(drug.lower())
+    ]
+    is_duplicated = check_therapeutic_duplication(new_ing, patient_ings)
+    if is_duplicated:
+        report["overall_status"] = "WARNING"
+        report["suggestions"].append("DUPLİKASYON UYARISI: Hasta halihazırda bu etken maddeyi içeren bir ilaç kullanmaktadır.")
+
+    # 3. YAŞ - DOZAJ KONTROLÜ
+    if patient.age:
+        age_warning = check_age_warnings(new_ing, patient.age)
+        if age_warning:
+            if "KRİTİK" in age_warning:
+                report["overall_status"] = "CRITICAL"
+                report["is_prescription_blocked"] = True
+            elif report["overall_status"] != "CRITICAL":
+                report["overall_status"] = "WARNING"
+            report["suggestions"].append(age_warning)
+
+    # 4. ALERJİ KONTROLÜ
     for allergy in patient.allergies:
         if allergy.allergen_name.lower() in new_ing.lower():
             report["allergy_count"] += 1
@@ -205,7 +281,7 @@ def prescribe_and_analyze(request: PrescriptionRequest):
             report["is_prescription_blocked"] = True
             report["allergy_warnings"].append(f"{allergy.allergen_name} alerjisi tespit edildi!")
 
-    # 3. İLAÇ - HASTALIK (KONTRENDİKASYON) KONTROLÜ
+    # 5. İLAÇ - HASTALIK (KONTRENDİKASYON) KONTROLÜ
     disease_conflicts = check_drug_disease_contraindications(new_ing, patient.diseases)
     for conflict in disease_conflicts:
         report["disease_conflict_count"] += 1
@@ -224,16 +300,25 @@ def prescribe_and_analyze(request: PrescriptionRequest):
             if warning_text not in report["suggestions"]:
                 report["suggestions"].append(warning_text)
 
-    # Hastanın etken maddelerinin listesini hazırlayalım
-    patient_ings = [
-        ingredients_dict.get(drug.lower()) 
-        for drug in patient_drug_names 
-        if ingredients_dict.get(drug.lower())
-    ]
+    # 6. İLAÇ - BESİN ETKİLEŞİMİ KONTROLÜ
+    food_interactions = check_food_interactions(new_ing)
+    for fw in food_interactions:
+        report["food_warning_count"] += 1
+        food_level = fw['level'].strip().capitalize()
+        food_text = f"Besin Etkileşimi [{food_level}] ({fw['food']}): {fw['message']}"
+        report["food_warnings"].append(food_text)
+        
+        if food_level == "Major":
+            if report["overall_status"] != "CRITICAL":
+                report["overall_status"] = "WARNING" 
+        
+        # Besin uyarılarını eczacıya/hastaya da iletmek için tavsiyelere de ekleyelim
+        report["suggestions"].append(food_text)
 
+
+    # 7. İLAÇ - İLAÇ ETKİLEŞİM KONTROLÜ
     interactions_dict = get_bulk_interactions(new_ing, patient_ings)
 
-    # 4. ETKİLEŞİM KONTROLÜ
     for med in patient.active_medications:
         med_ing = ingredients_dict.get(med.drug_name.lower())
         if not med_ing:
@@ -265,7 +350,7 @@ def prescribe_and_analyze(request: PrescriptionRequest):
                 if warn not in report["suggestions"]:
                     report["suggestions"].append(warn)
 
-    # 5. FİNAL KARAR VE RİSK YÖNETİMİ (SORUMLULUK ONAYI)
+    # 8. FİNAL KARAR VE RİSK YÖNETİMİ (SORUMLULUK ONAYI)
     if report["is_prescription_blocked"]:
         if not request.accept_responsibility:
             raise HTTPException(
@@ -284,7 +369,7 @@ def prescribe_and_analyze(request: PrescriptionRequest):
             logger.info(f"Hekim inisiyatifi kullanıldı. Hasta: {request.patient_id}, İlaç: {request.new_drug_name}, Gerekçe: {request.override_reason}")
     else:
         if report["overall_status"] == "WARNING":
-            report["recommendation"] = "Yakın klinik takip önerilir."
+            report["recommendation"] = "Yakın klinik takip ve hasta diyeti yönlendirmesi önerilir."
         else:
             report["recommendation"] = "Reçete güvenle oluşturulabilir."
 

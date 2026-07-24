@@ -1,0 +1,26 @@
+drug_id,drug_name,source,active_ingredient,atc_code
+D009,Lansor,TİTCK,Lansoprazole,A02BC03
+D008,Nexium,TİTCK,Esomeprazole,A02BC05
+D018,Gaviscon,TİTCK,Sodium Alginate,A02BX13
+D007,Glifor,TİTCK,Metformin,A10BA02
+D006,Coraspin,TİTCK,Acetylsalicylic Acid,B01AC06
+D021,Beloc ZOK,TİTCK,Metoprolol,C07AB02
+D014,Augmentin,TİTCK,Amoxicillin,J01CR02
+D015,Klacid,TİTCK,Clarithromycin,J01FA09
+D013,Dolorex,TİTCK,Diclofenac Potassium,M01AB05
+D022,Voltaren,TİTCK,Diclofenac Sodium,M01AB05
+D011,Apranax,TİTCK,Naproxen Sodium,M01AE02
+D010,Majezik,TİTCK,Flurbiprofen,M01AE09
+D004,Arveles,TİTCK,Dexketoprofen,M01AE17
+D003,Parol,TİTCK,Acetaminophen,N02BE01
+D019,Vermidon,TİTCK,Acetaminophen,N02BE51
+D002,Tegretol,TİTCK,Carbamazepine,N03AF01
+D001,Depakin,TİTCK,Valproic Acid,N03AG01
+D025,Lamictal,TİTCK,Lamotrigine,N03AX09
+D023,Keppra,TİTCK,Levetiracetam,N03AX14
+D024,Lyrica,TİTCK,Pregabalin,N03AX16
+D016,Atarax,TİTCK,Hydroxyzine,N05BB01
+D005,Lustral,TİTCK,Sertraline,N06AB06
+D012,Cipralex,TİTCK,Escitalopram,N06AB10
+D020,Ventolin,TİTCK,Salbutamol,R03AC02
+D017,Aerius,TİTCK,Desloratadine,R06AX27

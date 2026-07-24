@@ -1,129 +1,238 @@
-# DrugSense - Klinik Karar Destek Sistemi
+# DrugSense - Clinical Decision Support System (CDSS)
 
-DrugSense, BigQuery veritabanı altyapısını ve FastAPI framework'ünü kullanan, hekimlerin klinik karar süreçlerini desteklemek amacıyla tasarlanmış bir **ilaç-ilaç etkileşimi** ve **yardımcı madde duyarlılığı** sorgulama sistemidir.
+DrugSense is a **cloud-based Clinical Decision Support System (CDSS)** developed using **FastAPI** and **Google BigQuery**. The system is designed to support physicians and pharmacists throughout the medication prescribing and dispensing process by performing automated clinical safety checks.
 
-Proje, Türkiye İlaç ve Tıbbi Cihaz Kurumu (TİTCK) onaylı en yaygın Türkçe ilaçların yanı sıra bilimsel **DDInter** etkileşim veri tabanını ve kritik **nöroloji/epilepsi yama kurallarını** bir araya getirir.
+DrugSense integrates multiple clinical knowledge sources into a single platform, including:
+
+- Drug–Drug Interaction Analysis (DDInter)
+- Drug–Food Interaction Detection
+- Patient Allergy Screening
+- Pediatric and Geriatric Risk Assessment
+- Chronic Disease Contraindication Analysis
+- Therapeutic Duplication Detection
+- TİTCK-Approved Medication Database
+
+The primary goal of the project is to reduce medication errors, improve patient safety, and provide a reliable clinical decision support system.
 
 ---
 
-## 📂 Proje Klasör Yapısı
+# 📂 Project Structure
 
 ```text
-drugsense/
-├── gcp_key.json         # Google Cloud Yetkilendirme Anahtarı
-├── main.py              # FastAPI Uygulaması (API Servisi)
-├── README.md            # Proje Dokümantasyonu
+Grup-37/
+├── drugsense/
+│   ├── routes/
+│   │   ├── __init__.py
+│   │   ├── doctor.py          # Prescription workflow & safety engine
+│   │   ├── pharmacist.py      # Medication dispensing validation
+│   │   ├── patient.py         # Patient profile & adverse events
+│   │   ├── drugs.py           # Drug search & alternative recommendations
+│   │   └── emergency.py       # Break-glass authorization
+│   │
+│   ├── tests/
+│   │   ├── test_doctor.py
+│   │   ├── test_patient.py
+│   │   ├── test_pharmacist.py
+│   │   ├── test_safety_rules.py
+│   │   └── test_scenarios.py
+│   │
+│   ├── data/
+│   │   ├── drug_foods.csv
+│   │   ├── drug_diseases.csv
+│   │   ├── ddinter_data.csv
+│   │   ├── interactions.csv
+│   │   ├── titck_drugs.csv
+│   │   ├── titck_ingredients.csv
+│   │   ├── patients.csv
+│   │   └── ...
+│   │
+│   ├── scripts/
+│   │   ├── setup_bigquery.py
+│   │   ├── upload_to_bq.py
+│   │   ├── upload_drug_foods.py
+│   │   └── download_all_data.py
+│   │
+│   ├── database.py
+│   └── main.py
 │
-├── data/                # Temizlenmiş ve Hazırlanmış Veri Klasörü
-│   ├── ddinter_data.csv                    # DDInter klinik etkileşim verileri
-│   ├── titck_drugs.csv                     # TİTCK uyumlu 25 popüler ilaç listesi
-│   ├── titck_ingredients.csv               # Bu ilaçların yardımcı maddeleri (Excipients)
-│   └── custom_neurology_interactions.csv   # Epilepsiye özel eklenmiş kritik etkileşim kuralları
-│
-└── scripts/             # Veri Tabanı Kurulum ve Yükleme Betikleri
-    ├── setup_bigquery.py                   # BigQuery Şema ve Tablo Oluşturma Betiği
-    └── upload_to_bq.py                     # CSV Verilerini BigQuery'ye Yükleme (Mükerrer Önlemeli)
+├── gcp_key.json
+└── README.md
 ```
 
 ---
 
-## 🗄️ Veri Tabanı ve Şema Yapısı
+# 🗄️ Database Schema
 
-BigQuery üzerinde `drugsense_dataset` veri seti altında aşağıdaki 5 ana tablo bulunmaktadır:
+DrugSense stores its clinical data inside the **Google BigQuery** dataset named **`drugsense_dataset`**.
 
-### 1. `drugs` (İlaçlar Tablosu)
-Sistemde kayıtlı ilaçların temel bilgilerini içerir.
+## 1. drugs
 
-| Sütun Adı | Veri Tipi | Mod | Açıklama |
-| :--- | :--- | :--- | :--- |
-| `drug_id` | STRING | REQUIRED | İlacın benzersiz kimliği (Örn: D001) |
-| `drug_name` | STRING | REQUIRED | İlacın ticari/piyasa adı (Örn: Parol, Depakin) |
-| `source` | STRING | NULLABLE | Verinin alındığı kaynak (Örn: TİTCK) |
-| `active_ingredient` | STRING | NULLABLE | İlacın etken maddesi (Örn: Acetaminophen, Valproic Acid) |
-| `atc_code` | STRING | NULLABLE | İlacın Anatomik Terapötik Kimyasal (ATC) kodu |
+Stores basic information about medications.
 
-### 2. `ingredients` (Yardımcı Maddeler Tablosu)
-İlaçların içerdikleri yardımcı maddeleri (excipients) listeler.
-
-| Sütun Adı | Veri Tipi | Mod | Açıklama |
-| :--- | :--- | :--- | :--- |
-| `drug_id` | STRING | REQUIRED | İlacın benzersiz kimliği (`drugs` tablosu ile ilişkili) |
-| `ingredient_name` | STRING | REQUIRED | Yardımcı maddenin adı (Örn: Laktoz monohidrat, Nişasta) |
-
-### 3. `interactions` (İlaç Etkileşimleri Tablosu)
-Etken maddeler arasındaki etkileşim risklerini ve açıklamalarını içerir.
-
-| Sütun Adı | Veri Tipi | Mod | Açıklama |
-| :--- | :--- | :--- | :--- |
-| `ingredient_1` | STRING | REQUIRED | Etkileşime giren 1. etken madde |
-| `ingredient_2` | STRING | REQUIRED | Etkileşime giren 2. etken madde |
-| `risk_level` | STRING | REQUIRED | Etkileşim risk seviyesi (Major, Moderate, Minor) |
-| `mechanism_description` | STRING | NULLABLE | Etkileşimin fizyolojik/klinik mekanizma açıklaması |
-| `source` | STRING | NULLABLE | Etkileşim bilgisinin kaynağı (Örn: DDInter, Custom_Neurology) |
-
-### 4. `patient_allergies` (Hasta Alerji Tablosu)
-Hastaların hassas veya alerjik olduğu maddeleri listeler.
-
-| Sütun Adı | Veri Tipi | Mod | Açıklama |
-| :--- | :--- | :--- | :--- |
-| `patient_id` | STRING | REQUIRED | Hastanın benzersiz kimliği |
-| `allergen_name` | STRING | REQUIRED | Alerjenin adı (Etken madde veya yardımcı madde olabilir) |
-
-### 5. `patient_medications` (Hasta Reçete/İlaç Tablosu)
-Hastaların aktif olarak kullandığı ilaçları listeler.
-
-| Sütun Adı | Veri Tipi | Mod | Açıklama |
-| :--- | :--- | :--- | :--- |
-| `patient_id` | STRING | REQUIRED | Hastanın benzersiz kimliği |
-| `drug_id` | STRING | REQUIRED | Hastanın kullandığı ilacın ID'si |
+| Column | Type | Description |
+|----------|--------|--------------------------------|
+| drug_id | STRING | Unique drug identifier |
+| drug_name | STRING | Commercial drug name |
+| source | STRING | Data source (e.g. TİTCK) |
+| active_ingredient | STRING | Active pharmaceutical ingredient |
+| atc_code | STRING | ATC Classification Code |
 
 ---
 
-## 🚀 Çalıştırma Talimatları
+## 2. ingredients
 
-### 1. Gereksinimlerin Kurulması
-Gerekli Python paketlerini yükleyin:
+Contains inactive ingredients (excipients) for each medication.
+
+| Column | Type | Description |
+|----------|--------|--------------------------------|
+| drug_id | STRING | Drug identifier |
+| ingredient_name | STRING | Excipient name |
+
+---
+
+## 3. interactions
+
+Contains clinically significant drug-drug interaction records.
+
+| Column | Type | Description |
+|----------|--------|--------------------------------|
+| ingredient_1 | STRING | First active ingredient |
+| ingredient_2 | STRING | Second active ingredient |
+| risk_level | STRING | Major / Moderate / Minor |
+| mechanism_description | STRING | Clinical mechanism |
+| source | STRING | DDInter or custom clinical rules |
+
+---
+
+## 4. patient_allergies
+
+Stores patient allergy information.
+
+| Column | Type | Description |
+|----------|--------|--------------------------------|
+| patient_id | STRING | Patient identifier |
+| allergen_name | STRING | Allergic substance |
+
+---
+
+## 5. patient_medications
+
+Stores medications currently prescribed to patients.
+
+| Column | Type | Description |
+|----------|--------|--------------------------------|
+| patient_id | STRING | Patient identifier |
+| drug_id | STRING | Drug identifier |
+
+---
+
+# 🔍 Clinical Safety Checks
+
+DrugSense automatically evaluates prescriptions using multiple safety rules.
+
+- Drug–Drug Interaction Analysis
+- Drug–Food Interaction Detection
+- Allergy Screening
+- Pediatric Risk Analysis
+- Geriatric Risk Analysis
+- Chronic Disease Contraindication Checks
+- Therapeutic Duplication Detection
+- Alternative Drug Recommendation
+
+---
+
+# 🚀 Installation
+
+## 1. Install Required Packages
+
 ```bash
 pip install fastapi uvicorn google-cloud-bigquery pandas pyarrow db-dtypes
 ```
 
-### 2. GCP Kimlik Doğrulaması
-`gcp_key.json` dosyanızı proje kök dizinine (`drugsense/`) yerleştirin.
-> ⚠️ Bu dosya `.gitignore`'a eklenmiştir.
+---
 
-### 3. BigQuery Şemasının Oluşturulması
-BigQuery veri kümenizi ve boş tablolarınızı oluşturmak için:
+## 2. Configure Google Cloud Credentials
+
+Place your Google Cloud service account key inside the project root.
+
+```
+gcp_key.json
+```
+
+> **Note:** This file should be excluded using `.gitignore`.
+
+---
+
+## 3. Create the BigQuery Dataset
+
 ```bash
 python scripts/setup_bigquery.py
 ```
 
-### 4. Verilerin Yüklenmesi (Seeding)
-`data/` klasöründeki TİTCK ilaç listesini, yardımcı maddeleri, DDInter etkileşimlerini ve özel nöroloji kurallarını BigQuery'ye yüklemek için seeding betiğini çalıştırın. Bu betik **mükerrer (duplicate) kayıt oluşumunu engeller**:
+---
+
+## 4. Upload Clinical Data
+
+Load medications, ingredients, drug interactions, and food interaction datasets into BigQuery.
+
 ```bash
-python scripts/upload_to_bq.py
+python -m drugsense.scripts.setup_bigquery
+
+python -m drugsense.scripts.upload_to_bq
+
+python -m drugsense.scripts.upload_drug_foods
 ```
 
-### 5. API Servisinin Başlatılması
-FastAPI sunucusunu lokalde ayağa kaldırmak için:
+The upload scripts automatically prevent duplicate records.
+
+---
+
+## 5. Run the API
+
 ```bash
 uvicorn main:app --reload
 ```
 
-Sunucu başladıktan sonra aşağıdaki adresten **interaktif Swagger UI**'a erişebilirsiniz:
+Open Swagger UI:
+
 ```
 http://127.0.0.1:8000/docs
 ```
 
 ---
 
-## 🛠️ Teknoloji Yığını
+## 6. Run Unit Tests
 
-| Teknoloji | Kullanım Amacı |
-| :--- | :--- |
-| **FastAPI** | REST API servisi |
-| **Google BigQuery** | Bulut tabanlı veritabanı |
-| **Google Cloud Python SDK** | BigQuery istemci kütüphanesi |
-| **Pandas** | CSV veri işleme |
-| **DDInter Dataset** | Klinik ilaç etkileşim verisi |
-| **TİTCK** | Türkiye onaylı ilaç listesi |
+```bash
+python -m pytest drugsense/tests/test_safety_rules.py -v
+```
+
+---
+
+# 📡 API Modules
+
+| Module | Description |
+|----------|--------------------------------|
+| doctor.py | Prescription creation and clinical validation |
+| pharmacist.py | Medication dispensing safety checks |
+| patient.py | Patient profile and adverse event management |
+| drugs.py | Drug search and alternative recommendation |
+| emergency.py | Emergency ("Break Glass") authorization |
+
+---
+
+# 🛠️ Technology Stack
+
+| Technology | Purpose |
+|------------|------------------------------|
+| FastAPI | REST API Framework |
+| Google BigQuery | Cloud Database |
+| Google Cloud Python SDK | BigQuery Client |
+| Pandas | Data Processing |
+| PyArrow | CSV Upload Support |
+| DDInter | Drug Interaction Dataset |
+| TİTCK | Turkish Approved Drug Database |
+| Pytest | Unit Testing |
+
+---
 

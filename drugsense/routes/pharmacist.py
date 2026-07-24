@@ -3,7 +3,15 @@ from ..database import bq_client
 from google.cloud import bigquery
 from .patient import get_patient_profile
 from .drugs import get_muadiller
-from .doctor import get_bulk_drug_ingredients, get_bulk_interactions, check_drug_disease_contraindications
+# Tüm güvenlik fonksiyonlarını doctor modülünden çekiyoruz
+from .doctor import (
+    get_bulk_drug_ingredients, 
+    get_bulk_interactions, 
+    check_drug_disease_contraindications,
+    check_food_interactions,
+    check_therapeutic_duplication,
+    check_age_warnings
+)
 import logging
 
 router = APIRouter()
@@ -44,11 +52,13 @@ def check_safety(patient_id: str, drug_name: str):
 
     report = {
         "patient": patient.full_name,
+        "patient_age": patient.age,
         "drug": drug_name,
         "status": "SAFE",
         "polypharmacy": len(patient.active_medications) >= 5,
         "warnings": [],
         "disease_warnings": [],
+        "food_warnings": [],
         "interactions": [],
         "alternatives": [],
         "recommendation": "İlaç güvenle teslim edilebilir."
@@ -60,7 +70,28 @@ def check_safety(patient_id: str, drug_name: str):
             "Hastada polifarmasi riski bulunmaktadır (5 veya daha fazla aktif ilaç kullanımı)."
         )
 
-    # 2. Alerji Kontrolü
+    # 2. AYNI GRUP İLAÇ (DUPLİKASYON) KONTROLÜ
+    patient_ings = [
+        ingredients_dict.get(drug.lower()) 
+        for drug in patient_drug_names 
+        if ingredients_dict.get(drug.lower())
+    ]
+    is_duplicated = check_therapeutic_duplication(new_ing, patient_ings)
+    if is_duplicated:
+        report["status"] = "WARNING"
+        report["warnings"].append("DUPLİKASYON UYARISI: Hasta halihazırda bu etken maddeyi içeren bir ilaç kullanmaktadır.")
+
+    # 3. YAŞ - DOZAJ KONTROLÜ
+    if patient.age:
+        age_warning = check_age_warnings(new_ing, patient.age)
+        if age_warning:
+            if "KRİTİK" in age_warning:
+                report["status"] = "CRITICAL"
+            elif report["status"] != "CRITICAL":
+                report["status"] = "WARNING"
+            report["warnings"].append(age_warning)
+
+    # 4. ALERJİ KONTROLÜ
     for allergy in patient.allergies:
         if allergy.allergen_name.lower() in new_ing.lower():
             report["status"] = "CRITICAL"
@@ -68,7 +99,7 @@ def check_safety(patient_id: str, drug_name: str):
                 f"KRİTİK: {allergy.allergen_name} alerjisi tespit edildi!"
             )
 
-    # 3. İlaç - Hastalık (Kontrendikasyon) Kontrolü
+    # 5. İLAÇ - HASTALIK (KONTRENDİKASYON) KONTROLÜ
     disease_conflicts = check_drug_disease_contraindications(new_ing, patient.diseases)
     for conflict in disease_conflicts:
         level = conflict["level"].strip().capitalize()
@@ -85,14 +116,20 @@ def check_safety(patient_id: str, drug_name: str):
             if warning_text not in report["warnings"]:
                 report["warnings"].append(warning_text)
 
-    # Hastanın etken maddelerinin listesini hazırlayalım (etkileşim sorgusu için)
-    patient_ings = [
-        ingredients_dict.get(drug.lower()) 
-        for drug in patient_drug_names 
-        if ingredients_dict.get(drug.lower())
-    ]
+    # 6. İLAÇ - BESİN ETKİLEŞİMİ KONTROLÜ (Eczacı hastayı doğrudan uyarır)
+    food_interactions = check_food_interactions(new_ing)
+    for fw in food_interactions:
+        food_level = fw['level'].strip().capitalize()
+        food_text = f"Besin Etkileşimi [{food_level}] ({fw['food']}): {fw['message']}"
+        report["food_warnings"].append(food_text)
+        
+        if food_level == "Major":
+            if report["status"] != "CRITICAL":
+                report["status"] = "WARNING" 
+        
+        report["warnings"].append(food_text)
 
-    # 4. Etkileşim Kontrolü (Toplu sorgu ile performanslı)
+    # 7. ETKİLEŞİM KONTROLÜ (İlaç-İlaç)
     interactions_dict = get_bulk_interactions(new_ing, patient_ings)
 
     for med in patient.active_medications:
@@ -122,7 +159,7 @@ def check_safety(patient_id: str, drug_name: str):
             if warn_msg not in report["warnings"]:
                 report["warnings"].append(warn_msg)
 
-    # 5. Muadil Önerisi ve Final Karar
+    # 8. Muadil Önerisi ve Final Karar
     if report["status"] == "CRITICAL":
         try:
             muadil = get_muadiller(drug_name)
@@ -132,7 +169,7 @@ def check_safety(patient_id: str, drug_name: str):
             report["recommendation"] = "Muadil bulunamadı. Lütfen ilacı teslim etmeden önce reçete eden hekim ile iletişime geçiniz."
 
     elif report["status"] == "WARNING":
-        report["recommendation"] = "İlaç verilebilir ancak olası yan etkiler veya dozaj konusunda hastaya detaylı danışmanlık verilmesi önerilir."
+        report["recommendation"] = "İlaç verilebilir ancak olası yan etkiler, diyet kuralları ve yaş uyarıları konusunda hastaya detaylı danışmanlık verilmelidir."
 
     return report
 

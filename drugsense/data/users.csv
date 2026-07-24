@@ -1,0 +1,7 @@
+user_id,tc_no,full_name,role,password_hash,is_active
+U001,11111111111,Dr. Ayşe Yılmaz,DOCTOR,hash123,True
+U002,22222222222,Ecz. Ali Kaya,PHARMACIST,hash123,True
+U004,44444444444,Paramedik Fatma Şahin,PARAMEDIC,hash123,True
+U003,12345678901,Hasta Ahmet Demir,PATIENT,hash123,True
+U005,98765432109,Hasta Elif Yücel,PATIENT,hash123,True
+U006,55555555555,Hasta Yaşar Gök,PATIENT,hash123,True
