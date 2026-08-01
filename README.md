@@ -51,7 +51,7 @@ Sistem, farklı sağlık kuruluşlarındaki kopuk verilerin yarattığı tehlike
 
 ## Sprint 3 | 20.07.2026-02.08.2026
 
-[Sprint 2 Panosu ve Görevler](https://github.com/ozgeucr/Grup-37/blob/main/Sprint_3.md)
+[Sprint 3 Panosu ve Görevler](https://github.com/ozgeucr/Grup-37/blob/main/Sprint_3.md)
 
 
 
