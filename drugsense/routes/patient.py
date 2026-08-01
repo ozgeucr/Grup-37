@@ -114,3 +114,32 @@ def report_medication_side_effect(report: SideEffectReport):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Bildirim kaydedilemedi: {str(e)}")
+
+# --- DOKTOR İÇİN BEKLEYEN YAN ETKİ / ALERJİ BİLDİRİMLERİ ---
+@router.get("/pending-side-effects/{patient_tc}")
+def get_pending_side_effects(patient_tc: str):
+    """Hastanın gönderdiği ve henüz onaylanmamış yan etki / alerji bildirimlerini listeler."""
+    if bq_client is None:
+        raise HTTPException(status_code=500, detail="BigQuery bağlantısı kurulamadı.")
+
+    query = f"""
+        SELECT report_id, patient_tc, drug_name, symptoms, severity, report_date, status
+        FROM `{PROJECT_ID}.{DATASET_ID}.side_effect_reports`
+        WHERE CAST(patient_tc AS STRING) = @tc_no AND status = 'PENDING'
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[bigquery.ScalarQueryParameter("tc_no", "STRING", patient_tc)]
+    )
+    rows = list(bq_client.query(query, job_config=job_config).result())
+    
+    return [
+        {
+            "report_id": row.report_id,
+            "patient_tc": row.patient_tc,
+            "drug_name": row.drug_name,
+            "symptoms": row.symptoms,
+            "severity": row.severity,
+            "report_date": str(row.report_date)
+        }
+        for row in rows
+    ]

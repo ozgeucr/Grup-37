@@ -3,7 +3,8 @@ from ..database import bq_client
 from google.cloud import bigquery
 from .patient import get_patient_profile
 from .drugs import get_muadiller
-# Tüm güvenlik fonksiyonlarını doctor modülünden çekiyoruz
+
+# Tüm güvenlik fonksiyonlarını doctor modülünden çekiyoruz (Modüler yapı harika fikir!)
 from .doctor import (
     get_bulk_drug_ingredients, 
     get_bulk_interactions, 
@@ -44,11 +45,21 @@ def check_safety(patient_id: str, drug_name: str):
     ingredients_dict = get_bulk_drug_ingredients(all_drugs_to_check)
     new_ing = ingredients_dict.get(drug_name.lower())
 
+    # DÜZELTME: 404 fırlatmak yerine "MANUAL_REVIEW" dönüyoruz ki frontend çökmesin!
     if not new_ing:
-        raise HTTPException(
-            status_code=404,
-            detail="İlaç veya etken madde veritabanında bulunamadı."
-        )
+        return {
+            "patient": patient.full_name,
+            "patient_age": patient.age,
+            "drug": drug_name,
+            "status": "MANUAL_REVIEW",
+            "polypharmacy": len(patient.active_medications) >= 5,
+            "warnings": ["Sistem bu ilacı/etken maddeyi tanımadı."],
+            "disease_warnings": [],
+            "food_warnings": [],
+            "interactions": [],
+            "alternatives": [],
+            "recommendation": "Lütfen prospektüsü manuel kontrol edin veya hekime danışın."
+        }
 
     report = {
         "patient": patient.full_name,
@@ -177,15 +188,18 @@ def check_safety(patient_id: str, drug_name: str):
 # --- 1. AKTİF REÇETELERİ LİSTELEME ENDPOINT'İ ---
 @router.get("/active-prescriptions/{patient_tc}")
 def get_active_prescriptions(patient_tc: str):
-    """Eczacının, hastanın henüz alınmamış (PENDING) aktif reçetelerini görmesini sağlar."""
+    """Eczacının, hastanın henüz alınmamış aktif reçetelerini görmesini sağlar."""
     if bq_client is None:
         raise HTTPException(status_code=500, detail="BigQuery bağlantısı kurulamadı.")
 
+    # PENDING yerine sistemin atadığı onaylı statüleri arıyoruz ve doktor adını JOIN ile çekiyoruz
     query = f"""
-        SELECT prescription_id, doctor_tc_no, drug_name, status, created_at
-        FROM `{PROJECT_ID}.{DATASET_ID}.prescriptions`
-        WHERE CAST(patient_tc_no AS STRING) = @patient_tc
-          AND UPPER(status) = 'PENDING'
+        SELECT p.prescription_id, p.doctor_tc_no, p.drug_name, p.status, p.created_at, u.full_name as doctor_name
+        FROM `{PROJECT_ID}.{DATASET_ID}.prescriptions` p
+        LEFT JOIN `{PROJECT_ID}.{DATASET_ID}.users` u ON CAST(p.doctor_tc_no AS STRING) = CAST(u.tc_no AS STRING)
+        WHERE CAST(p.patient_tc_no AS STRING) = @patient_tc
+          AND p.status IN ('SAFE', 'WARNING', 'OVERRIDDEN_BY_DOCTOR')
+        ORDER BY p.created_at DESC
     """
     job_config = bigquery.QueryJobConfig(
         query_parameters=[bigquery.ScalarQueryParameter("patient_tc", "STRING", patient_tc)]
@@ -197,6 +211,7 @@ def get_active_prescriptions(patient_tc: str):
         {
             "prescription_id": row.prescription_id,
             "doctor_tc_no": row.doctor_tc_no,
+            "doctor_name": row.doctor_name or "Bilinmeyen Hekim",
             "drug_name": row.drug_name,
             "status": row.status,
             "created_at": str(row.created_at)
@@ -235,3 +250,23 @@ def dispense_medication(prescription_id: str):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Reçete güncellenemedi: {str(e)}")
+
+@router.get("/search-drug")
+def search_drug(q: str):
+    """Eczacı panelindeki otomatik tamamlama (autocomplete) için ilaç arar."""
+    if not q or len(q) < 2:
+        return []
+        
+    query = f"""
+        SELECT DISTINCT drug_name as name, active_ingredient
+        FROM `{PROJECT_ID}.{DATASET_ID}.drugs`
+        WHERE LOWER(drug_name) LIKE LOWER(@search) 
+           OR LOWER(active_ingredient) LIKE LOWER(@search)
+        LIMIT 10
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[bigquery.ScalarQueryParameter("search", "STRING", f"%{q}%")]
+    )
+    res = bq_client.query(query, job_config=job_config).result()
+    
+    return [{"name": row.name, "active_ingredient": row.active_ingredient} for row in res]
