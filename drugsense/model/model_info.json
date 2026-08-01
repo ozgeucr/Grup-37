@@ -1,0 +1,53 @@
+{
+  "model": "XGBoost",
+  "version": "1.0",
+  "accuracy": 0.91,
+  "macro_f1": 0.77,
+  "overfitting_gap": 0.025,
+  "parametreler": {
+    "subsample": 0.8,
+    "n_estimators": 300,
+    "min_child_weight": 3,
+    "max_depth": 6,
+    "learning_rate": 0.1,
+    "colsample_bytree": 0.8,
+    "reg_alpha": 0.5,
+    "reg_lambda": 1.0
+  },
+  "ozellikler": [
+    "drug_a_enc",
+    "drug_b_enc",
+    "id_a_num",
+    "id_b_num",
+    "degree_a",
+    "degree_b",
+    "major_rate_a",
+    "major_rate_b",
+    "atc_a_enc",
+    "atc_b_enc",
+    "suffix özellikleri (24 adet)"
+  ],
+  "veri_kaynaklari": [
+    "DDInter 1.0",
+    "RxNorm API",
+    "TİTCK",
+    "Custom Neurology"
+  ],
+  "sinif_performansi": {
+    "Major": {
+      "precision": 0.89,
+      "recall": 0.92,
+      "f1": 0.91
+    },
+    "Minor": {
+      "precision": 0.47,
+      "recall": 0.47,
+      "f1": 0.47
+    },
+    "Moderate": {
+      "precision": 0.95,
+      "recall": 0.93,
+      "f1": 0.94
+    }
+  }
+}

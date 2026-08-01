@@ -1,238 +1,158 @@
-# DrugSense - Clinical Decision Support System (CDSS)
+# DrugSense — AI Model Dokümantasyonu
 
-DrugSense is a **cloud-based Clinical Decision Support System (CDSS)** developed using **FastAPI** and **Google BigQuery**. The system is designed to support physicians and pharmacists throughout the medication prescribing and dispensing process by performing automated clinical safety checks.
+## Genel Bakış
 
-DrugSense integrates multiple clinical knowledge sources into a single platform, including:
-
-- Drug–Drug Interaction Analysis (DDInter)
-- Drug–Food Interaction Detection
-- Patient Allergy Screening
-- Pediatric and Geriatric Risk Assessment
-- Chronic Disease Contraindication Analysis
-- Therapeutic Duplication Detection
-- TİTCK-Approved Medication Database
-
-The primary goal of the project is to reduce medication errors, improve patient safety, and provide a reliable clinical decision support system.
+DrugSense, etken madde bazlı ilaç-ilaç etkileşimi (DDI) analizi yapan bir Klinik Karar Destek Sistemidir. Bu dokümantasyon AI modelinin nasıl kullanılacağını açıklar.
 
 ---
 
-# 📂 Project Structure
+## Hızlı Kullanım
 
-```text
-Grup-37/
-├── drugsense/
-│   ├── routes/
-│   │   ├── __init__.py
-│   │   ├── doctor.py          # Prescription workflow & safety engine
-│   │   ├── pharmacist.py      # Medication dispensing validation
-│   │   ├── patient.py         # Patient profile & adverse events
-│   │   ├── drugs.py           # Drug search & alternative recommendations
-│   │   └── emergency.py       # Break-glass authorization
-│   │
-│   ├── tests/
-│   │   ├── test_doctor.py
-│   │   ├── test_patient.py
-│   │   ├── test_pharmacist.py
-│   │   ├── test_safety_rules.py
-│   │   └── test_scenarios.py
-│   │
-│   ├── data/
-│   │   ├── drug_foods.csv
-│   │   ├── drug_diseases.csv
-│   │   ├── ddinter_data.csv
-│   │   ├── interactions.csv
-│   │   ├── titck_drugs.csv
-│   │   ├── titck_ingredients.csv
-│   │   ├── patients.csv
-│   │   └── ...
-│   │
-│   ├── scripts/
-│   │   ├── setup_bigquery.py
-│   │   ├── upload_to_bq.py
-│   │   ├── upload_drug_foods.py
-│   │   └── download_all_data.py
-│   │
-│   ├── database.py
-│   └── main.py
-│
-├── gcp_key.json
-└── README.md
-```
+    from drugsense.api.predict import predict_interaction
+    result = predict_interaction("Ibuprofen", "Warfarin")
+    print(result)
+
+### Örnek Çıktı
+
+    {
+        "drug_a": "Ibuprofen",
+        "drug_b": "Warfarin",
+        "risk_level": "Major",
+        "confidence": "54.2%",
+        "mechanism": "DDInter veritabanından ML modeli ile tahmin edildi.",
+        "atc_a": "N02AJ",
+        "atc_b": "B01AA",
+        "method": "ML Model",
+        "color": "red"
+    }
 
 ---
 
-# 🗄️ Database Schema
+## Kurulum
 
-DrugSense stores its clinical data inside the **Google BigQuery** dataset named **`drugsense_dataset`**.
-
-## 1. drugs
-
-Stores basic information about medications.
-
-| Column | Type | Description |
-|----------|--------|--------------------------------|
-| drug_id | STRING | Unique drug identifier |
-| drug_name | STRING | Commercial drug name |
-| source | STRING | Data source (e.g. TİTCK) |
-| active_ingredient | STRING | Active pharmaceutical ingredient |
-| atc_code | STRING | ATC Classification Code |
+    pip install -r drugsense/api/requirements.txt
 
 ---
 
-## 2. ingredients
+## Model Mimarisi
 
-Contains inactive ingredients (excipients) for each medication.
+### Hibrit Tahmin Sistemi
 
-| Column | Type | Description |
-|----------|--------|--------------------------------|
-| drug_id | STRING | Drug identifier |
-| ingredient_name | STRING | Excipient name |
+Model iki katmanlı bir yapıya sahiptir:
 
----
+- Yeni ilaç çifti geldiğinde önce kural tablosuna bakılır
+- Kural tablosunda varsa: %100 güven, mekanizma açıklamasıyla döner
+- Kural tablosunda yoksa: ML Model (XGBoost) tahmin yapar
 
-## 3. interactions
+### Kullanılan Model
 
-Contains clinically significant drug-drug interaction records.
+- Algoritma: XGBoost
+- Accuracy: %91
+- Macro F1: 0.77
+- Overfitting Farkı: 0.025
 
-| Column | Type | Description |
-|----------|--------|--------------------------------|
-| ingredient_1 | STRING | First active ingredient |
-| ingredient_2 | STRING | Second active ingredient |
-| risk_level | STRING | Major / Moderate / Minor |
-| mechanism_description | STRING | Clinical mechanism |
-| source | STRING | DDInter or custom clinical rules |
+### Model Parametreleri
 
----
-
-## 4. patient_allergies
-
-Stores patient allergy information.
-
-| Column | Type | Description |
-|----------|--------|--------------------------------|
-| patient_id | STRING | Patient identifier |
-| allergen_name | STRING | Allergic substance |
+| Parametre | Değer |
+|---|---|
+| n_estimators | 300 |
+| max_depth | 6 |
+| learning_rate | 0.1 |
+| subsample | 0.8 |
+| colsample_bytree | 0.8 |
+| min_child_weight | 3 |
+| reg_alpha | 0.5 |
+| reg_lambda | 1.0 |
 
 ---
 
-## 5. patient_medications
+## Performans Metrikleri
 
-Stores medications currently prescribed to patients.
-
-| Column | Type | Description |
-|----------|--------|--------------------------------|
-| patient_id | STRING | Patient identifier |
-| drug_id | STRING | Drug identifier |
-
----
-
-# 🔍 Clinical Safety Checks
-
-DrugSense automatically evaluates prescriptions using multiple safety rules.
-
-- Drug–Drug Interaction Analysis
-- Drug–Food Interaction Detection
-- Allergy Screening
-- Pediatric Risk Analysis
-- Geriatric Risk Analysis
-- Chronic Disease Contraindication Checks
-- Therapeutic Duplication Detection
-- Alternative Drug Recommendation
+| Sınıf | Precision | Recall | F1 |
+|---|---|---|---|
+| Major | 0.89 | 0.92 | 0.91 |
+| Minor | 0.47 | 0.47 | 0.47 |
+| Moderate | 0.95 | 0.93 | 0.94 |
+| Genel | 0.91 | 0.91 | 0.91 |
 
 ---
 
-# 🚀 Installation
+## Özellikler (Features)
 
-## 1. Install Required Packages
+Model 34 özellik kullanmaktadır:
 
-```bash
-pip install fastapi uvicorn google-cloud-bigquery pandas pyarrow db-dtypes
-```
-
----
-
-## 2. Configure Google Cloud Credentials
-
-Place your Google Cloud service account key inside the project root.
-
-```
-gcp_key.json
-```
-
-> **Note:** This file should be excluded using `.gitignore`.
+| Özellik Grubu | Özellikler | Açıklama |
+|---|---|---|
+| Temel Encoding | drug_a_enc, drug_b_enc | İlaç isimleri sayıya çevrildi |
+| ID Numaraları | id_a_num, id_b_num | DDInter ID numaraları |
+| Graf Özellikleri | degree_a, degree_b, major_rate_a, major_rate_b | İlaç ağı istatistikleri |
+| ATC Kodu | atc_a_enc, atc_b_enc | İlaç kategorisi (RxNorm API) |
+| İsim Son Ekleri | 24 adet binary özellik | -azole, -mab, -statin vb. |
 
 ---
 
-## 3. Create the BigQuery Dataset
+## Veri Kaynakları
 
-```bash
-python scripts/setup_bigquery.py
-```
-
----
-
-## 4. Upload Clinical Data
-
-Load medications, ingredients, drug interactions, and food interaction datasets into BigQuery.
-
-```bash
-python -m drugsense.scripts.setup_bigquery
-
-python -m drugsense.scripts.upload_to_bq
-
-python -m drugsense.scripts.upload_drug_foods
-```
-
-The upload scripts automatically prevent duplicate records.
+| Kaynak | Kullanım | Kayıt Sayısı |
+|---|---|---|
+| DDInter 1.0 | Ana etkileşim verisi | 12.024 |
+| RxNorm API | İlaç ATC kodu | 1.464 ilaç |
+| TİTCK | Türkiye ilaçları | 25 ilaç |
+| Custom Neurology | Nöroloji etkileşimleri | 4 kayıt |
 
 ---
 
-## 5. Run the API
+## API Dönüş Değerleri
 
-```bash
-uvicorn main:app --reload
-```
-
-Open Swagger UI:
-
-```
-http://127.0.0.1:8000/docs
-```
-
----
-
-## 6. Run Unit Tests
-
-```bash
-python -m pytest drugsense/tests/test_safety_rules.py -v
-```
+| Alan | Tip | Açıklama |
+|---|---|---|
+| drug_a | string | Birinci ilaç adı |
+| drug_b | string | İkinci ilaç adı |
+| risk_level | string | Major / Moderate / Minor |
+| confidence | string | Tahmin güveni |
+| mechanism | string | Etkileşim mekanizması |
+| atc_a | string | Birinci ilacın ATC kodu |
+| atc_b | string | İkinci ilacın ATC kodu |
+| method | string | Kural Tabanlı / ML Model |
+| color | string | red / orange / green |
 
 ---
 
-# 📡 API Modules
+## Demo Senaryoları
 
-| Module | Description |
-|----------|--------------------------------|
-| doctor.py | Prescription creation and clinical validation |
-| pharmacist.py | Medication dispensing safety checks |
-| patient.py | Patient profile and adverse event management |
-| drugs.py | Drug search and alternative recommendation |
-| emergency.py | Emergency ("Break Glass") authorization |
-
----
-
-# 🛠️ Technology Stack
-
-| Technology | Purpose |
-|------------|------------------------------|
-| FastAPI | REST API Framework |
-| Google BigQuery | Cloud Database |
-| Google Cloud Python SDK | BigQuery Client |
-| Pandas | Data Processing |
-| PyArrow | CSV Upload Support |
-| DDInter | Drug Interaction Dataset |
-| TİTCK | Turkish Approved Drug Database |
-| Pytest | Unit Testing |
+| İlaç A | İlaç B | Risk | Güven | Yöntem |
+|---|---|---|---|---|
+| Valproic Acid | Carbamazepine | Major | %100 | Kural Tabanlı |
+| Ibuprofen | Warfarin | Major | %54 | ML Model |
+| Paracetamol | Codeine | Minor | %61 | ML Model |
+| Metformin | Insulin | Moderate | %97 | ML Model |
 
 ---
 
+## Dosya Yapısı
+
+    drugsense/
+    api/
+        predict.py
+        requirements.txt
+    model/
+        drugsense_final_model.pkl
+        le_drug_a.pkl
+        le_drug_b.pkl
+        le_level.pkl
+        le_atc.pkl
+        atc_map.pkl
+        drug_interaction_count.pkl
+        drug_major_count.pkl
+        interaction_rules.pkl
+        model_info.json
+    data/
+        (veri dosyaları)
+
+---
+
+## Geliştirme Notları
+
+- Minor sınıfı test setinde sadece 57 kayıtla temsil edildiği için F1 skoru düşük görünmektedir.
+- Model etken madde isimleriyle çalışmaktadır. Türkçe marka isimleri için önce etken maddeye çevrilmesi gerekmektedir.
+- Kural tabanlı sistem önceliklidir — interactions tablosuna yeni kayıt eklendikçe sistem otomatik olarak güncellenir.
