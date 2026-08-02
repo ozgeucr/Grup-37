@@ -2,6 +2,11 @@
 
 * **Backlog Düzeni ve Story Seçimleri:** Bir önceki sprintte oluşturulan teknik altyapı ve tamamlanan veri ön işleme çalışmalarının ardından Sprint 3 boyunca önceliğimiz; **uçtan uca (end-to-end) sistem entegrasyonu**, **yapay zeka modelinin eğitimi ve sisteme entegre edilmesi**, **frontend geliştirme sürecinin tamamlanması** ve **ürünün final hale getirilmesi** olmuştur. Bu sprint kapsamında DDInter veri seti kullanılarak XGBoost tabanlı ilaç etkileşim modeli başarıyla eğitilmiş ve FastAPI backend mimarisine entegre edilmiştir. React, Vite ve TailwindCSS kullanılarak Doktor, Eczacı, Hasta ve Paramedik panelleri geliştirilmiş; sistemin kritik özelliklerinden biri olan **Break-Glass (Acil Erişim)** modülü tamamlanarak paramediklerin acil durumlarda hastaların kronik hastalık, alerji ve operasyon bilgilerine güvenli şekilde erişmesi sağlanmıştır. Bunun yanında frontend ile backend arasındaki tüm API entegrasyonları tamamlanmış ve sistem uçtan uca çalışır duruma getirilmiştir.
 
+  [Sprint 3.pdf](https://github.com/user-attachments/files/30634477/Sprint.3.pdf)
+
+<img width="845" height="473" alt="Ekran Resmi 2026-08-02 18 31 37" src="https://github.com/user-attachments/assets/c161afc3-1570-47d5-94d9-0584a4ad69f7" />
+
+
 * **Scrum ve Asenkron İletişim Süreci:** Sprint boyunca yapay zeka modeli, backend servisleri ve frontend arayüzlerinin tek bir sistem altında birleştirilmesi sürecinde takım içi iletişim en yoğun seviyede gerçekleşmiştir. Özellikle API yönlendirme problemleri (404 Not Found), veri doğrulama hataları (422 Unprocessable Entity), BigQuery veri tipi uyuşmazlıkları (`STRING`, `INT64`, `DATE`) ve SQL sorgularındaki tip dönüşümleri asenkron iletişim ve eşli programlama (pair programming) oturumları sayesinde kısa sürede çözülmüştür. Geliştirme süreci boyunca karşılaşılan engeller düzenli olarak paylaşılmış, gerekli revizyonlar hızlı şekilde uygulanmış ve sistem entegrasyonu başarıyla tamamlanmıştır.
 
 *(Takım iletişimine dair kesitler, model eğitim süreçleri, entegrasyon çalışmaları, test çıktıları ve geliştirme kanıtlarına **[Sprint 3 İletişim, Model Eğitimi, Entegrasyon ve Kanıtlar (Artifacts)](https://github.com/ozgeucr/Grup-37/blob/main/Sprint_3_Attachments/README.md)** sayfasından ulaşabilirsiniz.)*
