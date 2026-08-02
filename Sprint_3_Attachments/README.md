@@ -20,7 +20,8 @@ Bu aşamada;
 - SQL sorguları test edildi.
 - FastAPI ile BigQuery bağlantısı doğrulandı.
 
-**Kanıtlar**
+
+  ![BigQuery Bağlantısı](bigquery_baglantisi.png)
 
 - BigQuery Dataset ekran görüntüleri
 - Klinik tablolar
@@ -50,7 +51,7 @@ Model;
 
 üretecek şekilde optimize edilmiştir.
 
-**Kanıtlar**
+  ![Model](model_egitimi.png)
 
 - Model eğitim çıktıları
 - Eğitim logları
@@ -77,7 +78,8 @@ Kullanılan servisler:
 
 Sistem artık reçete oluşturulduğu anda ilaçlar arasında oluşabilecek etkileşimleri analiz etmektedir.
 
-**Kanıtlar**
+
+  ![Entegrasyon](model_entegresi.png)
 
 - Backend servis ekran görüntüleri
 - Model entegrasyon kodları
@@ -110,7 +112,7 @@ Gerçekleştirilen geliştirmeler:
 - Yetkilendirme işlemleri
 - REST API endpointleri
 
-**Kanıtlar**
+
 
 - Swagger ekranları
 - FastAPI endpoint testleri
@@ -142,7 +144,7 @@ Arayüz geliştirmelerinde;
 
 kullanılmıştır.
 
-**Kanıtlar**
+  ![Frontend](frontend_giris.png)
 
 - Login ekranı
 - Dashboard ekranları
@@ -167,7 +169,7 @@ Gerçekleştirilen işlemler:
 
 Sistem artık uçtan uca çalışmaktadır.
 
-**Kanıtlar**
+  ![Entegrasyon](urun_birlestirme.png)
 
 - API istekleri
 - Network çıktıları
@@ -198,7 +200,7 @@ Her erişim;
 - Audit Log tablosuna kaydedilir.
 - Güvenlik amacıyla kayıt altına alınır.
 
-**Kanıtlar**
+
 
 - Break Glass ekranı
 - Swagger testleri
@@ -227,7 +229,8 @@ Amaç;
 
 üretilen analiz sonuçlarının gerçek veriler ile tutarlı olmasını sağlamaktır.
 
-**Kanıtlar**
+
+  ![Veri İncelemesi](veri_incelemesi.png)
 
 - BigQuery tabloları
 - SQL sorguları
@@ -262,7 +265,8 @@ Bu süreçte;
 
 gibi hata senaryoları düzeltilmiş ve sistem kararlı hale getirilmiştir.
 
-**Kanıtlar**
+
+  ![Son Kontrol](son_kontroller.png)
 
 - Swagger testleri
 - Postman çıktıları
