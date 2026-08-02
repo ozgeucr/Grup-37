@@ -151,7 +151,7 @@ npm run dev
 Uygulama varsayılan olarak aşağıdaki adreste çalışacaktır:
 
 ```text
-http://localhost:5173
+http://drugsense.local:5173/
 ```
 
 ---
@@ -247,15 +247,6 @@ Ayrıca;
 - API adresi gerektiğinde `services` klasöründen değiştirilebilir.
 - Tüm kullanıcı girişleri rol bazlı doğrulanmaktadır.
 - FastAPI backend ile JSON tabanlı REST API üzerinden haberleşmektedir.
-
----
-
-# 👨‍💻 Geliştirici
-
-**DrugSense – Klinik Karar Destek Sistemi**
-
-Manisa Celal Bayar Üniversitesi  
-Bilgisayar Mühendisliği Bitirme Projesi
 
 ---
 
