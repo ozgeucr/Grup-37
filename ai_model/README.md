@@ -6,35 +6,35 @@ DrugSense, etken madde bazlı ilaç-ilaç etkileşimi (DDI) analizi yapan bir Kl
 
 ---
 
+## Kurulum
+
+Sistemin çalışması için gerekli kütüphaneleri yüklemek adına projenin ana dizininde şu komutu çalıştırın:
+
+```bash
+pip install -r ai_model/api/requirements.txt
+uvicorn ai_model.main:app --reload
+```
+---
+
 ## Hızlı Kullanım
 
-    from drugsense.api.predict import predict_interaction
-    result = predict_interaction("Ibuprofen", "Warfarin")
-    print(result)
+from drugsense.api.predict import predict_interaction
+result = predict_interaction("Ibuprofen", "Warfarin")
+print(result)
 
 ### Örnek Çıktı
 
-    {
-        "drug_a": "Ibuprofen",
-        "drug_b": "Warfarin",
-        "risk_level": "Major",
-        "confidence": "54.2%",
-        "mechanism": "DDInter veritabanından ML modeli ile tahmin edildi.",
-        "atc_a": "N02AJ",
-        "atc_b": "B01AA",
-        "method": "ML Model",
-        "color": "red"
-    }
-
----
-
-## Kurulum
-
-    pip install -r drugsense/api/requirements.txt
-
----
-
-## Model Mimarisi
+{
+"drug_a": "Ibuprofen",
+"drug_b": "Warfarin",
+"risk_level": "Major",
+"confidence": "54.2%",
+"mechanism": "DDInter veritabanından ML modeli ile tahmin edildi.",
+"atc_a": "N02AJ",
+"atc_b": "B01AA",
+"method": "ML Model",
+"color": "red"
+}
 
 ### Hibrit Tahmin Sistemi
 
@@ -126,28 +126,6 @@ Model 34 özellik kullanmaktadır:
 | Ibuprofen | Warfarin | Major | %54 | ML Model |
 | Paracetamol | Codeine | Minor | %61 | ML Model |
 | Metformin | Insulin | Moderate | %97 | ML Model |
-
----
-
-## Dosya Yapısı
-
-    drugsense/
-    api/
-        predict.py
-        requirements.txt
-    model/
-        drugsense_final_model.pkl
-        le_drug_a.pkl
-        le_drug_b.pkl
-        le_level.pkl
-        le_atc.pkl
-        atc_map.pkl
-        drug_interaction_count.pkl
-        drug_major_count.pkl
-        interaction_rules.pkl
-        model_info.json
-    data/
-        (veri dosyaları)
 
 ---
 
