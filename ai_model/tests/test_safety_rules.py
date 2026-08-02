@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 # Projedeki fonksiyonları içe aktarıyoruz
-from drugsense.routes.doctor import (
+from ai_model.routes.doctor import (
     check_therapeutic_duplication,
     check_age_warnings,
     check_food_interactions

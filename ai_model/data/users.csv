@@ -1,7 +1,17 @@
 user_id,tc_no,full_name,role,password_hash,is_active
-U001,11111111111,Dr. Ayşe Yılmaz,DOCTOR,hash123,True
-U002,22222222222,Ecz. Ali Kaya,PHARMACIST,hash123,True
-U004,44444444444,Paramedik Fatma Şahin,PARAMEDIC,hash123,True
-U003,12345678901,Hasta Ahmet Demir,PATIENT,hash123,True
-U005,98765432109,Hasta Elif Yücel,PATIENT,hash123,True
-U006,55555555555,Hasta Yaşar Gök,PATIENT,hash123,True
+U001,89021458935,Dr. Mehmet Özkan,DOCTOR,hash123,True
+U002,35678298736,Ecz. Zeynep Çelik,PHARMACIST,hash123,True
+U003,11111111111,Dr. Ayşe Yılmaz,DOCTOR,hash123,True
+U004,22222222222,Ecz. Ali Kaya,PHARMACIST,hash123,True
+U005,44444444444,Paramedik Fatma Şahin,PARAMEDIC,hash123,True
+U006,10000000001,Dr. Ahmet Yılmaz,DOCTOR,hash123,True
+U007,10000000002,Dr. Selim Ak,DOCTOR,hash123,True
+U008,10000000003,Dr. Emre Can,DOCTOR,hash123,True
+U009,10000000004,Dr. Deniz Yıldız,DOCTOR,hash123,True
+U010,10000000005,Dr. Murat Şahin,DOCTOR,hash123,True
+U011,10000000006,Dr. Can Yücel,DOCTOR,hash123,True
+U012,10000000007,Dr. Seda Korkmaz,DOCTOR,hash123,True
+U013,10000000008,Ecz. Burak Demir,PHARMACIST,hash123,True
+U014,10000000009,Ecz. Ayfer Şen,PHARMACIST,hash123,True
+U015,10000000010,Paramedik Kemal Gök,PARAMEDIC,hash123,True
+U016,10000000011,Paramedik Cansu Ay,PARAMEDIC,hash123,True

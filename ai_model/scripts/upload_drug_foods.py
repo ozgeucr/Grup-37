@@ -1,6 +1,6 @@
 import pandas as pd
 from google.cloud import bigquery
-from drugsense.database import bq_client  
+from ai_model.database import bq_client  
 
 PROJECT_ID = bq_client.project
 DATASET_ID = "drugsense_dataset"

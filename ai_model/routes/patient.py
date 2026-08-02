@@ -1,145 +1,278 @@
-from fastapi import APIRouter, HTTPException
+import logging
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel, Field
+from typing import List, Optional
 from google.cloud import bigquery
-from ..database import bq_client
-from ..models import PatientProfile, AllergyRecord, MedicationRecord, DiseaseRecord
-from pydantic import BaseModel
 from datetime import datetime, timezone
 import uuid
 
-router = APIRouter()
+# Projendeki veritabanı modülü (Göreceli yollar projene göre ayarlanabilir)
+from ..database import bq_client
 
-PROJECT_ID = bq_client.project
+router = APIRouter(tags=["Patient Profile"])
+logger = logging.getLogger(__name__)
+
+PROJECT_ID = bq_client.project if bq_client else "default_project"
 DATASET_ID = "drugsense_dataset"
 
 
-@router.get("/profile/{tc_no}", response_model=PatientProfile)
-def get_patient_profile(tc_no: str):
-    if bq_client is None:
-        raise HTTPException(status_code=500, detail="BigQuery bağlantısı kurulamadı.")
+# ==========================================
+# VERİ MODELLERİ (PYDANTIC)
+# ==========================================
+class MedicationRecord(BaseModel):
+    drug_name: str
+    status: str
+    prescribed_date: str
+    prescribing_doctor: Optional[str] = "-"
 
-    # Ortak konfigürasyon
-    query_config = bigquery.QueryJobConfig(
-        query_parameters=[bigquery.ScalarQueryParameter("tc_no", "STRING", tc_no)]
-    )
+class AllergyRecord(BaseModel):
+    allergen_name: str
+    severity: str
 
-    # 1. Hasta bilgisi (PROJECT_ID ve DATASET_ID düzeltildi)
-    patient_query = f"SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.patients` WHERE CAST(tc_no AS STRING) = @tc_no LIMIT 1"
-    patient_rows = list(bq_client.query(patient_query, job_config=query_config).result())
-    
-    if not patient_rows:
-        raise HTTPException(status_code=404, detail="Hasta bulunamadı.")
-    patient = patient_rows[0]
+class DiseaseRecord(BaseModel):
+    disease_name: str
+    icd10_code: str
 
-    # 2. Alerjiler
-    allergy_query = f"SELECT allergen_name, severity, source FROM `{PROJECT_ID}.{DATASET_ID}.patient_allergies` WHERE CAST(tc_no AS STRING) = @tc_no"
-    allergies = [
-        AllergyRecord(allergen_name=row.allergen_name, severity=row.severity, source=row.source)
-        for row in bq_client.query(allergy_query, job_config=query_config).result()
-    ]
-
-    # 3. Hastalıklar (Kronik Tanılar)
-    disease_query = f"SELECT icd10_code, disease_name, diagnosed_date FROM `{PROJECT_ID}.{DATASET_ID}.patient_diseases` WHERE CAST(patient_tc_no AS STRING) = @tc_no"
-    diseases = [
-        DiseaseRecord(icd10_code=row.icd10_code, disease_name=row.disease_name, diagnosed_date=str(row.diagnosed_date))
-        for row in bq_client.query(disease_query, job_config=query_config).result()
-    ]
-
-    # 4. Aktif ve Geçmiş İlaçlar
-    medication_query = f"SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.patient_medications` WHERE CAST(tc_no AS STRING) = @tc_no"
-    active_medications = []
-    past_medications = []
-
-    for row in bq_client.query(medication_query, job_config=query_config).result():
-        medication = MedicationRecord(
-            drug_name=row.drug_name, 
-            status=row.status, 
-            prescribed_date=str(row.prescribed_date), 
-            prescribing_doctor=row.prescribing_doctor
-        )
-        if row.status.lower() == "aktif":
-            active_medications.append(medication)
-        else:
-            past_medications.append(medication)
-
-    return PatientProfile(
-        tc_no=str(patient.tc_no),
-        full_name=patient.full_name,
-        age=patient.age,
-        blood_type=patient.blood_type,
-        allergies=allergies,
-        diseases=diseases,
-        active_medications=active_medications,
-        past_medications=past_medications
-    )
+class PatientProfile(BaseModel):
+    tc_no: str
+    full_name: str
+    age: Optional[int] = None
+    blood_type: Optional[str] = None
+    allergies: List[AllergyRecord] = Field(default_factory=list)
+    diseases: List[DiseaseRecord] = Field(default_factory=list)
+    active_medications: List[MedicationRecord] = Field(default_factory=list)
+    past_medications: List[MedicationRecord] = Field(default_factory=list)
 
 class SideEffectReport(BaseModel):
-    patient_tc: str
+    tc_no: str = Field(alias="patient_tc") 
     drug_name: str
-    symptoms: str
-    severity: str  # Örn: "Hafif", "Orta", "Şiddetli"
+    symptoms: str  # Frontend'den gelen veri
+    severity: str
+    
+    class Config:
+        populate_by_name = True 
 
-# 2. Yan Etki Bildirme Endpoint'i
-@router.post("/report-side-effect")
-def report_medication_side_effect(report: SideEffectReport):
-    if bq_client is None:
+
+# ==========================================
+# VERİTABANI YARDIMCI FONKSİYONU
+# ==========================================
+def execute_bq_query(query: str, parameters: list) -> list:
+    if not bq_client:
         raise HTTPException(status_code=500, detail="BigQuery bağlantısı kurulamadı.")
+    
+    job_config = bigquery.QueryJobConfig(query_parameters=parameters)
+    try:
+        return list(bq_client.query(query, job_config=job_config).result())
+    except Exception as e:
+        logger.error(f"BigQuery Sorgu Hatası: {str(e)}")
+        raise HTTPException(status_code=500, detail="Veritabanı sorgusu sırasında hata oluştu.")
 
-    report_id = f"REP-{uuid.uuid4().hex[:8].upper()}"
-    report_date = datetime.now(timezone.utc).isoformat()
-    
-    # BigQuery'ye "Beklemede" (PENDING) statüsü ile kayıt atıyoruz
-    query = f"""
-        INSERT INTO `{PROJECT_ID}.{DATASET_ID}.side_effect_reports`
-        (report_id, patient_tc, drug_name, symptoms, severity, report_date, status)
-        VALUES (@report_id, @tc_no, @drug_name, @symptoms, @severity, CAST(@report_date AS TIMESTAMP), 'PENDING')
+
+# ==========================================
+def get_patient_profile(tc_no: str) -> PatientProfile:
+    clean_tc = tc_no.strip()
+
+    print("=" * 60)
+    print(f"🔍 Hasta aranıyor : {clean_tc}")
+    print(f"📦 Project        : {PROJECT_ID}")
+    print(f"📂 Dataset        : {DATASET_ID}")
+
+    user_query = f"""
+        SELECT
+            tc_no,
+            full_name,
+            age,
+            blood_type
+        FROM `{PROJECT_ID}.{DATASET_ID}.patients`
+        WHERE TRIM(CAST(tc_no AS STRING)) = @tc_no
+        LIMIT 1
     """
-    
-    job_config = bigquery.QueryJobConfig(
-        query_parameters=[
-            bigquery.ScalarQueryParameter("report_id", "STRING", report_id),
-            bigquery.ScalarQueryParameter("tc_no", "STRING", report.patient_tc),
-            bigquery.ScalarQueryParameter("drug_name", "STRING", report.drug_name),
-            bigquery.ScalarQueryParameter("symptoms", "STRING", report.symptoms),
-            bigquery.ScalarQueryParameter("severity", "STRING", report.severity),
-            bigquery.ScalarQueryParameter("report_date", "STRING", report_date),
+
+    print("SQL:")
+    print(user_query)
+
+    user_res = execute_bq_query(
+        user_query,
+        [
+            bigquery.ScalarQueryParameter(
+                "tc_no",
+                "STRING",
+                clean_tc
+            )
         ]
     )
 
-    try:
-        bq_client.query(query, job_config=job_config).result()
-        return {
-            "status": "success",
-            "message": "Yan etki bildiriminiz başarıyla alındı ve doktorunuzun onayına sunuldu.",
-            "report_id": report_id
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Bildirim kaydedilemedi: {str(e)}")
+    print(f"Bulunan kayıt sayısı : {len(user_res)}")
 
-# --- DOKTOR İÇİN BEKLEYEN YAN ETKİ / ALERJİ BİLDİRİMLERİ ---
-@router.get("/pending-side-effects/{patient_tc}")
-def get_pending_side_effects(patient_tc: str):
-    """Hastanın gönderdiği ve henüz onaylanmamış yan etki / alerji bildirimlerini listeler."""
-    if bq_client is None:
-        raise HTTPException(status_code=500, detail="BigQuery bağlantısı kurulamadı.")
+    if len(user_res) > 0:
+        print(dict(user_res[0].items()))
 
-    query = f"""
-        SELECT report_id, patient_tc, drug_name, symptoms, severity, report_date, status
-        FROM `{PROJECT_ID}.{DATASET_ID}.side_effect_reports`
-        WHERE CAST(patient_tc AS STRING) = @tc_no AND status = 'PENDING'
-    """
-    job_config = bigquery.QueryJobConfig(
-        query_parameters=[bigquery.ScalarQueryParameter("tc_no", "STRING", patient_tc)]
+    if not user_res:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Hasta bulunamadı ({clean_tc})"
+        )
+
+    row = user_res[0]
+
+    profile = PatientProfile(
+        tc_no=clean_tc,
+        full_name=row.full_name,
+        age=row.age,
+        blood_type=row.blood_type
     )
-    rows = list(bq_client.query(query, job_config=job_config).result())
+
+    # ---------------- ALLERGIES ----------------
+
+    allergy_query = f"""
+        SELECT
+            allergen_name,
+            severity
+        FROM `{PROJECT_ID}.{DATASET_ID}.patient_allergies`
+        WHERE TRIM(CAST(tc_no AS STRING))=@tc_no
+    """
+
+    allergies = execute_bq_query(
+        allergy_query,
+        [bigquery.ScalarQueryParameter("tc_no", "STRING", clean_tc)]
+    )
+
+    for a in allergies:
+        profile.allergies.append(
+            AllergyRecord(
+                allergen_name=a.allergen_name,
+                severity=a.severity
+            )
+        )
+
+    # ---------------- DISEASES ----------------
+
+    disease_query = f"""
+        SELECT
+            disease_name,
+            icd10_code
+        FROM `{PROJECT_ID}.{DATASET_ID}.patient_diseases`
+        WHERE TRIM(CAST(tc_no AS STRING))=@tc_no
+    """
+
+    diseases = execute_bq_query(
+        disease_query,
+        [bigquery.ScalarQueryParameter("tc_no", "STRING", clean_tc)]
+    )
+
+    for d in diseases:
+        profile.diseases.append(
+            DiseaseRecord(
+                disease_name=d.disease_name,
+                icd10_code=d.icd10_code
+            )
+        )
+
+    # ---------------- MEDICATIONS ----------------
+
+    med_query = f"""
+        SELECT
+            drug_name,
+            status,
+            prescribed_date,
+            prescribing_doctor
+        FROM `{PROJECT_ID}.{DATASET_ID}.patient_medications`
+        WHERE TRIM(CAST(tc_no AS STRING))=@tc_no
+    """
+
+    meds = execute_bq_query(
+        med_query,
+        [bigquery.ScalarQueryParameter("tc_no", "STRING", clean_tc)]
+    )
+
+    for m in meds:
+
+        med = MedicationRecord(
+            drug_name=m.drug_name,
+            status=m.status,
+            prescribed_date=str(m.prescribed_date),
+            prescribing_doctor=m.prescribing_doctor or "-"
+        )
+
+        if str(m.status).lower() in ["aktif", "active"]:
+            profile.active_medications.append(med)
+        else:
+            profile.past_medications.append(med)
+
+    print("✅ Hasta başarıyla bulundu.")
+    print("=" * 60)
+
+    return profile
+
+
+# ==========================================
+# API ENDPOINT'LERİ
+# ==========================================
+@router.get("/profile/{tc_no}", response_model=PatientProfile)
+def api_get_patient_profile(tc_no: str):
+    return get_patient_profile(tc_no)
+
+
+@router.post("/side-effect", status_code=status.HTTP_201_CREATED)
+def report_side_effect(report: SideEffectReport):
+    report_id = f"SE-{uuid.uuid4().hex[:8].upper()}"
+    current_time = datetime.now(timezone.utc).isoformat()
     
-    return [
-        {
-            "report_id": row.report_id,
-            "patient_tc": row.patient_tc,
-            "drug_name": row.drug_name,
-            "symptoms": row.symptoms,
-            "severity": row.severity,
-            "report_date": str(row.report_date)
-        }
-        for row in rows
+    # DÜZELTME: Tablodaki gerçek kolon adı olan 'symptom' kullanıldı (fazladan verification_status parametresi temizlendi)
+    query = f"""
+        INSERT INTO `{PROJECT_ID}.{DATASET_ID}.side_effect_reports`
+        (report_id, tc_no, drug_name, symptom, verification_status, reported_at)
+        VALUES (@r_id, @tc_no, @drug, @symptom, 'PENDING', CAST(@reported_at AS TIMESTAMP))
+    """
+    params = [
+        bigquery.ScalarQueryParameter("r_id", "STRING", report_id),
+        bigquery.ScalarQueryParameter("tc_no", "STRING", report.tc_no),
+        bigquery.ScalarQueryParameter("drug", "STRING", report.drug_name),
+        bigquery.ScalarQueryParameter("symptom", "STRING", report.symptoms),
+        bigquery.ScalarQueryParameter("reported_at", "STRING", current_time)
     ]
+    
+    execute_bq_query(query, params)
+    
+    return {"status": "success", "message": "Yan etki bildirimi başarıyla oluşturuldu.", "report_id": report_id}
+
+
+@router.get("/pending-side-effects/{tc_no}")
+def get_pending_side_effects(tc_no: str):
+    # DÜZELTME: Tablodaki tekil 'symptom' kolonu sorgulanıyor ve mapleme yapılıyor
+    query = f"""
+        SELECT
+            report_id,
+            drug_name,
+            symptom,
+            verification_status,
+            reported_at
+        FROM `{PROJECT_ID}.{DATASET_ID}.side_effect_reports`
+        WHERE
+            CAST(tc_no AS STRING) = @tc_no
+            AND verification_status = 'PENDING'
+        ORDER BY reported_at DESC
+    """
+
+    params = [
+        bigquery.ScalarQueryParameter(
+            "tc_no",
+            "STRING",
+            tc_no.strip()
+        )
+    ]
+
+    rows = execute_bq_query(query, params)
+
+    return {
+        "pending_reports": [
+            {
+                "report_id": r.report_id,
+                "drug_name": r.drug_name,
+                "symptoms": r.symptom, # Frontend 'symptoms' beklediği için veritabanındaki 'symptom' buraya mapleniyor
+                "verification_status": r.verification_status,
+                "reported_at": str(r.reported_at)
+            }
+            for r in rows
+        ]
+    }

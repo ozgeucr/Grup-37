@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from drugsense.main import app  # FastAPI app nesnenizin olduğu ana dosya
+from ai_model.main import app  # FastAPI app nesnenizin olduğu ana dosya
 
 client = TestClient(app)
 

@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 
 # Yolu 'drugsense' paketinden başlayarak veriyoruz
-from drugsense.routes.doctor import router 
+from ai_model.routes.doctor import router 
 
 app = FastAPI()
 app.include_router(router)

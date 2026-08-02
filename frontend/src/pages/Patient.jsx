@@ -127,7 +127,8 @@ export default function PatientDashboard({ user, onLogout }) {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(`http://localhost:8000/patient/report-side-effect`, {
+      // HATA DÜZELTİLDİ: /report-side-effect yerine backend'e uygun olan /side-effect kullanıldı
+      const res = await fetch(`http://localhost:8000/patient/side-effect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -155,8 +156,9 @@ export default function PatientDashboard({ user, onLogout }) {
     }
   };
 
+  // GÜVENLİK DÜZELTMESİ: Boş dizilere karşı güvenlik eklendi
   const allPrescriptions = patientData 
-    ? [...patientData.active_medications, ...patientData.past_medications] 
+    ? [...(patientData.active_medications || []), ...(patientData.past_medications || [])] 
     : [];
 
   return (

@@ -1,3 +1,5 @@
-report_id,patient_tc_no,drug_name,symptom,verification_status,reported_at
+report_id,tc_no,drug_name,symptom,verification_status,reported_at
 REP001,98765432109,Aspirin,Şiddetli mide ağrısı ve yanma,PENDING,2026-07-22 11:28:01.045587+00:00
 REP002,55555555555,Parol,Ciltte döküntü ve kızarıklık,VERIFIED,2026-07-22 11:28:01.045587+00:00
+REP003,99999999999,Tramadol,Aşırı bulantı baş dönmesi ve halsizlik,PENDING,2026-08-01 09:15:00.000000+00:00
+REP004,11223344556,Furosemide,Kas krampları ve aşırı idrara çıkma,PENDING,2026-08-01 14:30:00.000000+00:00
