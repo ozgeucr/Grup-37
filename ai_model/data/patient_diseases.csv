@@ -1,5 +1,7 @@
-patient_tc_no,icd10_code,disease_name,diagnosed_date
+tc_no,icd10_code,disease_name,diagnosed_date
 12345678901,G40,Epilepsi,2020-05-10
 12345678901,J45,Astım,2018-11-22
 98765432109,K27,Peptik Ülser,2022-01-15
 55555555555,I10,Hipertansiyon,2015-08-30
+99999999999,F32.9,Depresyon,2024-03-12
+11223344556,I50.9,Kalp Yetersizliği,2021-10-05

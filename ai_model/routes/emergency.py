@@ -1,100 +1,350 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
-from datetime import datetime, timezone
-import uuid
-import logging
-from ..database import bq_client
 from google.cloud import bigquery
+from datetime import datetime
+import logging
+import uuid
 
-router = APIRouter()
+from ..database import bq_client
+
+router = APIRouter(tags=["Emergency Access"])
+
 PROJECT_ID = bq_client.project
 DATASET_ID = "drugsense_dataset"
+
 logger = logging.getLogger(__name__)
 
-# İstek (Request) Modeli
+
 class BreakGlassRequest(BaseModel):
     paramedic_tc: str
     patient_tc: str
     reason: str = "Acil Müdahale"
 
-def log_emergency_action(actor_tc: str, target_tc: str, details: str):
-    """Bu fonksiyon arka planda çalışır. Paramediği bekletmeden veritabanına log düşer."""
-    log_id = f"EMG-{uuid.uuid4().hex[:8].upper()}"
-    now = datetime.now(timezone.utc).isoformat()
-    
-    # 1. Audit Log (Yasal Denetim Kaydı)
-    audit_query = f"""
-        INSERT INTO `{PROJECT_ID}.{DATASET_ID}.audit_logs` 
-        (log_id, actor_tc_no, action_type, target_tc_no, timestamp, details)
-        VALUES (@log_id, @actor, 'EMERGENCY_ACCESS', @target, CAST(@time AS TIMESTAMP), @details)
-    """
-    
-    # 2. Hasta ve Doktor Paneli İçin Bildirim Kaydı (Eğer notifications tablon varsa buraya düşer)
-    # Not: Sistemde bildirim paneli için audit_logs veya ayrı bir bildirim tablosu kullanılabilir.
-    
-    job_config = bigquery.QueryJobConfig(
-        query_parameters=[
-            bigquery.ScalarQueryParameter("log_id", "STRING", log_id),
-            bigquery.ScalarQueryParameter("actor", "STRING", actor_tc),
-            bigquery.ScalarQueryParameter("target", "STRING", target_tc),
-            bigquery.ScalarQueryParameter("time", "STRING", now),
-            bigquery.ScalarQueryParameter("details", "STRING", details)
-        ]
-    )
+
+# -------------------------------------------------------
+# ORTAK QUERY FONKSİYONU
+# -------------------------------------------------------
+
+def execute_query(query: str, params: list):
+    job = bigquery.QueryJobConfig(query_parameters=params)
+    return list(bq_client.query(query, job_config=job).result())
+
+
+# -------------------------------------------------------
+# AUDIT LOG
+# -------------------------------------------------------
+
+def log_emergency_action(actor_tc: str, patient_tc: str, details: str):
+
     try:
-        bq_client.query(audit_query, job_config=job_config).result()
-        logger.info(f"KIRMIZI ALARM LOGLANDI VE BİLDİRİM OLUŞTURULDU: {actor_tc} -> {target_tc}")
+
+        query = f"""
+        INSERT INTO `{PROJECT_ID}.{DATASET_ID}.audit_logs`
+        (
+            log_id,
+            actor_tc_no,
+            action_type,
+            target_tc_no,
+            timestamp,
+            details
+        )
+
+        VALUES
+        (
+            @log_id,
+            @actor,
+            'EMERGENCY_ACCESS',
+            @patient,
+            CURRENT_TIMESTAMP(),
+            @details
+        )
+        """
+
+        execute_query(
+            query,
+            [
+                bigquery.ScalarQueryParameter(
+                    "log_id",
+                    "STRING",
+                    f"EMG-{uuid.uuid4().hex[:8].upper()}",
+                ),
+                bigquery.ScalarQueryParameter(
+                    "actor",
+                    "STRING",
+                    actor_tc,
+                ),
+                bigquery.ScalarQueryParameter(
+                    "patient",
+                    "STRING",
+                    patient_tc,
+                ),
+                bigquery.ScalarQueryParameter(
+                    "details",
+                    "STRING",
+                    details,
+                ),
+            ],
+        )
+
+        logger.info(f"Emergency log oluşturuldu -> {actor_tc}")
+
     except Exception as e:
-        logger.error(f"Acil durum loglama/bildirim hatası: {e}")
+        logger.error(f"Audit Log Hatası : {e}")
+
+
+# -------------------------------------------------------
+# BREAK GLASS
+# -------------------------------------------------------
 
 @router.post("/break-glass")
-def emergency_break_glass(request: BreakGlassRequest, background_tasks: BackgroundTasks):
-    """Paramediklerin hastanın hayati verilerine saniyeler içinde erişmesini sağlar."""
-    
-    # 1. YETKİ KONTROLÜ (Sadece PARAMEDIC girebilir)
-    user_query = f"SELECT role, full_name FROM `{PROJECT_ID}.{DATASET_ID}.users` WHERE tc_no = @tc LIMIT 1"
-    user_config = bigquery.QueryJobConfig(query_parameters=[bigquery.ScalarQueryParameter("tc", "STRING", request.paramedic_tc)])
-    user_res = list(bq_client.query(user_query, job_config=user_config).result())
-    
-    if not user_res or user_res[0].role != "PARAMEDIC":
-        raise HTTPException(status_code=403, detail="Erişim reddedildi! Sadece yetkili Acil Tıp Personeli 'Camı Kır' yetkisine sahiptir.")
-    
-    paramedic_name = user_res[0].full_name
+def emergency_break_glass(
+    request: BreakGlassRequest,
+    background_tasks: BackgroundTasks,
+):
 
-    # 2. HASTA KONTROLÜ VE HAYATİ VERİLERİ (Hastalıklar)
-    disease_query = f"SELECT disease_name, diagnosed_date FROM `{PROJECT_ID}.{DATASET_ID}.patient_diseases` WHERE patient_tc_no = @tc"
-    disease_config = bigquery.QueryJobConfig(query_parameters=[bigquery.ScalarQueryParameter("tc", "STRING", request.patient_tc)])
-    disease_res = list(bq_client.query(disease_query, job_config=disease_config).result())
-    
-    # Alerjiler
-    allergy_query = f"SELECT allergen_name, severity FROM `{PROJECT_ID}.{DATASET_ID}.patient_allergies` WHERE CAST(tc_no AS STRING) = @tc"
-    allergy_config = bigquery.QueryJobConfig(query_parameters=[bigquery.ScalarQueryParameter("tc", "STRING", request.patient_tc)])
-    allergy_res = list(bq_client.query(allergy_query, job_config=allergy_config).result())
+    print("=== BREAK GLASS ===")
+    print(request)
 
-    # Geçmiş Operasyonlar / Müdahaleler (Eğer tablonuzda varsa, yoksa boş döner)
-    try:
-        surgery_query = f"SELECT surgery_name, surgery_date FROM `{PROJECT_ID}.{DATASET_ID}.patient_surgeries` WHERE CAST(patient_tc_no AS STRING) = @tc"
-        surgery_config = bigquery.QueryJobConfig(query_parameters=[bigquery.ScalarQueryParameter("tc", "STRING", request.patient_tc)])
-        surgery_res = list(bq_client.query(surgery_query, job_config=surgery_config).result())
-    except Exception:
-        surgery_res = [] # Tablo henüz yoksa sistemi patlatmaz
+    # ---------------------------------------------------
+    # PARAMEDİK KONTROLÜ
+    # ---------------------------------------------------
 
-    # 3. ARKA PLANDA LOGLAMA VE BİLDİRİM (Camı Kırıyoruz)
-    background_tasks.add_task(
-        log_emergency_action, 
-        actor_tc=request.paramedic_tc, 
-        target_tc=request.patient_tc, 
-        details=f"ACİL DURUM: {paramedic_name} tarafından acil müdahale tetiklendi. Gerekçe: {request.reason}. Hastaya acil müdahale yapıldı bildirimi gönderildi."
+    paramedic = execute_query(
+        f"""
+        SELECT full_name, role
+        FROM `{PROJECT_ID}.{DATASET_ID}.users`
+        WHERE CAST(tc_no AS STRING)=@tc
+        LIMIT 1
+        """,
+        [
+            bigquery.ScalarQueryParameter(
+                "tc",
+                "STRING",
+                request.paramedic_tc,
+            )
+        ],
     )
 
-    # 4. HAYAT KURTARAN VERİYİ DÖN
+    if not paramedic:
+        raise HTTPException(
+            status_code=404,
+            detail="Paramedik bulunamadı."
+        )
+
+    if paramedic[0].role.upper() != "PARAMEDIC":
+        raise HTTPException(
+            status_code=403,
+            detail="Bu işlem yalnızca paramedikler tarafından yapılabilir."
+        )
+
+    paramedic_name = paramedic[0].full_name
+
+    # ---------------------------------------------------
+    # HASTA KONTROLÜ
+    # ---------------------------------------------------
+
+    patient = execute_query(
+        f"""
+        SELECT
+            full_name,
+            age,
+            gender,
+            blood_type,
+            phone
+        FROM `{PROJECT_ID}.{DATASET_ID}.patients`
+        WHERE CAST(tc_no AS STRING)=@tc
+        LIMIT 1
+        """,
+        [
+            bigquery.ScalarQueryParameter(
+                "tc",
+                "STRING",
+                request.patient_tc,
+            )
+        ],
+    )
+
+    if not patient:
+        raise HTTPException(
+            status_code=404,
+            detail="Hasta bulunamadı."
+        )
+
+    # ---------------------------------------------------
+    # KRONİK HASTALIKLAR
+    # ---------------------------------------------------
+
+    diseases = execute_query(
+        f"""
+        SELECT
+            disease_name,
+            diagnosed_date
+        FROM `{PROJECT_ID}.{DATASET_ID}.patient_diseases`
+        WHERE CAST(tc_no AS STRING)=@tc
+        """,
+        [
+            bigquery.ScalarQueryParameter(
+                "tc",
+                "STRING",
+                request.patient_tc,
+            )
+        ],
+    )
+
+    # ---------------------------------------------------
+    # ALERJİLER
+    # ---------------------------------------------------
+
+    allergies = execute_query(
+        f"""
+        SELECT
+            allergen_name,
+            severity
+        FROM `{PROJECT_ID}.{DATASET_ID}.patient_allergies`
+        WHERE CAST(tc_no AS STRING)=@tc
+        """,
+        [
+            bigquery.ScalarQueryParameter(
+                "tc",
+                "STRING",
+                request.patient_tc,
+            )
+        ],
+    )
+
+    # ---------------------------------------------------
+    # AKTİF İLAÇLAR
+    # ---------------------------------------------------
+
+    medications = execute_query(
+        f"""
+        SELECT
+            drug_name,
+            prescribed_date,
+            prescribing_doctor
+        FROM `{PROJECT_ID}.{DATASET_ID}.patient_medications`
+        WHERE CAST(tc_no AS STRING)=@tc
+        AND status='Aktif'
+        ORDER BY prescribed_date DESC
+        """,
+        [
+            bigquery.ScalarQueryParameter(
+                "tc",
+                "STRING",
+                request.patient_tc,
+            )
+        ],
+    )
+
+    # ---------------------------------------------------
+    # OPERASYONLAR (TABLO YOKSA BOŞ)
+    # ---------------------------------------------------
+
+    surgeries = []
+
+    try:
+
+        surgeries = execute_query(
+            f"""
+            SELECT
+                surgery_name,
+                surgery_date
+            FROM `{PROJECT_ID}.{DATASET_ID}.patient_surgeries`
+            WHERE CAST(tc_no AS STRING)=@tc
+            """,
+            [
+                bigquery.ScalarQueryParameter(
+                    "tc",
+                    "STRING",
+                    request.patient_tc,
+                )
+            ],
+        )
+
+    except Exception:
+        pass
+
+    # ---------------------------------------------------
+    # LOG
+    # ---------------------------------------------------
+
+    background_tasks.add_task(
+        log_emergency_action,
+        request.paramedic_tc,
+        request.patient_tc,
+        f"{paramedic_name} acil erişim gerçekleştirdi. Sebep: {request.reason}",
+    )
+
+    p = patient[0]
+
+    # ---------------------------------------------------
+    # RESPONSE
+    # ---------------------------------------------------
+
     return {
+
         "status": "EMERGENCY_OVERRIDE_ACTIVE",
-        "patient_tc": request.patient_tc,
-        "warning": "BU BİLGİLER SADECE ACİL MÜDAHALE İÇİNDİR. Hasta ve doktor paneline acil müdahale bildirimi düşülmüştür.",
+
+        "warning": "Bu bilgiler yalnızca acil müdahale amacıyla görüntülenmektedir.",
+
+        "patient": {
+
+            "tc_no": request.patient_tc,
+            "full_name": p.full_name,
+            "age": p.age,
+            "gender": p.gender,
+            "blood_type": p.blood_type,
+            "phone": p.phone,
+
+        },
+
         "vital_data": {
-            "chronic_diseases": [{"disease": row.disease_name, "date": str(row.diagnosed_date)} for row in disease_res],
-            "surgeries": [{"surgery": row.surgery_name, "date": str(row.surgery_date)} for row in surgery_res] if surgery_res else [],
-            "allergies": [{"allergen": row.allergen_name, "severity": row.severity} for row in allergy_res]
+
+            "chronic_diseases": [
+
+                {
+                    "disease": d.disease_name,
+                    "diagnosed_date": str(d.diagnosed_date)
+                }
+
+                for d in diseases
+
+            ],
+
+            "allergies": [
+
+                {
+                    "allergen": a.allergen_name,
+                    "severity": a.severity
+                }
+
+                for a in allergies
+
+            ],
+
+            "active_medications": [
+
+                {
+                    "drug": m.drug_name,
+                    "prescribed_date": str(m.prescribed_date),
+                    "doctor": m.prescribing_doctor
+                }
+
+                for m in medications
+
+            ],
+
+            "surgeries": [
+
+                {
+                    "surgery": s.surgery_name,
+                    "date": str(s.surgery_date)
+                }
+
+                for s in surgeries
+
+            ]
+
         }
+
     }

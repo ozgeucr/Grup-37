@@ -1,9 +1,31 @@
+import logging
+from functools import lru_cache
 from fastapi import APIRouter, HTTPException
 from ..database import bq_client
 from ..models import MuadilResponse
 from google.cloud import bigquery
 
-router = APIRouter()
+# Loglama ayarlarını yapılandırıyoruz
+logger = logging.getLogger(__name__)
+
+# Arkadaşının eklediği Yapay Zeka Modelini içe aktarıyoruz
+try:
+    from ai_model.api.predict import predict_interaction
+except ImportError as e:
+    # Model yüklenemediğinde terminale ve loglara kırmızı alarm düşer!
+    logger.critical(f"YAPAY ZEKA MODELİ YÜKLENEMEDİ! Fallback devrede. Hata: {e}")
+    # Eğer import yolunda bir farklılık olursa diye yedek sarmalayıcı
+    def predict_interaction(drug_a, drug_b):
+        return {
+            "risk_level": "Unknown", 
+            "mechanism": "AI Model yüklenemedi.", 
+            "method": "Fallback",
+            "confidence": 0
+        }
+
+router = APIRouter(
+    tags=["Drugs & Interactions"]
+)
 
 PROJECT_ID = bq_client.project
 DATASET_ID = "drugsense_dataset"
@@ -12,7 +34,6 @@ DATASET_ID = "drugsense_dataset"
 def get_muadiller(drug_name: str):
     """Verilen ilacın etken maddesini bulur ve aynı etken maddeye sahip diğer ilaçları listeler."""
     
-    # Önce ilacın etken maddesini buluyoruz
     query_active_ingredient = f"""
         SELECT active_ingredient 
         FROM `{PROJECT_ID}.{DATASET_ID}.drugs`
@@ -20,7 +41,7 @@ def get_muadiller(drug_name: str):
     """
     
     job_config_ai = bigquery.QueryJobConfig(
-        query_parameters=[bigquery.ScalarQueryParameter("drug_name", "STRING", drug_name.lower())]
+        query_parameters=[bigquery.ScalarQueryParameter("drug_name", "STRING", drug_name.lower().strip())]
     )
     
     query_job_ai = bq_client.query(query_active_ingredient, job_config=job_config_ai)
@@ -31,7 +52,6 @@ def get_muadiller(drug_name: str):
     
     active_ingredient = results_ai[0].active_ingredient
     
-    # Şimdi aynı etken maddeye sahip diğer ilaçları buluyoruz
     query_alternatives = f"""
         SELECT drug_name 
         FROM `{PROJECT_ID}.{DATASET_ID}.drugs`
@@ -41,7 +61,7 @@ def get_muadiller(drug_name: str):
     job_config_alt = bigquery.QueryJobConfig(
         query_parameters=[
             bigquery.ScalarQueryParameter("active_ingredient", "STRING", active_ingredient.lower()),
-            bigquery.ScalarQueryParameter("drug_name", "STRING", drug_name.lower())
+            bigquery.ScalarQueryParameter("drug_name", "STRING", drug_name.lower().strip())
         ]
     )
     
@@ -59,56 +79,83 @@ def get_muadiller(drug_name: str):
         alternative_drugs=alternative_drugs
     )
 
+
 @router.get("/check-drug-disease/{drug_name}/{icd10_code}")
 def check_drug_disease_risk(drug_name: str, icd10_code: str):
     """Verilen ilacın, hastanın belirli bir tanısı/hastalığı (ICD-10) ile çelişip çelişmediğini kontrol eder."""
     
-    # 1. İlacın etken maddesini bulalım
-    ing_query = f"""
-        SELECT active_ingredient 
-        FROM `{PROJECT_ID}.{DATASET_ID}.drugs`
-        WHERE LOWER(drug_name) = @drug_name
+    query = f"""
+        SELECT d.active_ingredient, dd.disease_name, dd.risk_level, dd.warning_message
+        FROM `{PROJECT_ID}.{DATASET_ID}.drugs` d
+        LEFT JOIN `{PROJECT_ID}.{DATASET_ID}.drug_diseases` dd
+          ON LOWER(d.active_ingredient) = LOWER(dd.active_ingredient)
+         AND UPPER(dd.icd10_code) = UPPER(@icd10_code)
+        WHERE LOWER(d.drug_name) = LOWER(@drug_name)
         LIMIT 1
     """
-    ing_config = bigquery.QueryJobConfig(query_parameters=[bigquery.ScalarQueryParameter("drug_name", "STRING", drug_name.lower())])
-    ing_res = list(bq_client.query(ing_query, job_config=ing_config).result())
     
-    if not ing_res:
-        raise HTTPException(status_code=404, detail="İlaç veritabanında bulunamadı.")
-    
-    active_ingredient = ing_res[0].active_ingredient
-
-    # 2. drug_diseases tablosunda bu etken madde ve hastalık eşleşmesini sorgulayalım
-    check_query = f"""
-        SELECT disease_name, risk_level, warning_message
-        FROM `{PROJECT_ID}.{DATASET_ID}.drug_diseases`
-        WHERE LOWER(active_ingredient) = LOWER(@active_ingredient)
-          AND UPPER(icd10_code) = UPPER(@icd10_code)
-        LIMIT 1
-    """
-    check_config = bigquery.QueryJobConfig(
+    job_config = bigquery.QueryJobConfig(
         query_parameters=[
-            bigquery.ScalarQueryParameter("active_ingredient", "STRING", active_ingredient),
-            bigquery.ScalarQueryParameter("icd10_code", "STRING", icd10_code)
+            bigquery.ScalarQueryParameter("drug_name", "STRING", drug_name.lower().strip()),
+            bigquery.ScalarQueryParameter("icd10_code", "STRING", icd10_code.strip())
         ]
     )
-    check_res = list(bq_client.query(check_query, job_config=check_config).result())
     
-    if not check_res:
+    result = list(bq_client.query(query, job_config=job_config).result())
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="İlaç veritabanında bulunamadı.")
+        
+    row = result[0]
+    
+    if not row.risk_level:
         return {
             "drug_name": drug_name,
-            "active_ingredient": active_ingredient,
+            "active_ingredient": row.active_ingredient,
             "icd10_code": icd10_code,
             "risk_status": "SAFE",
             "warning": "Bu ilaç ile belirtilen hastalık arasında kayıtlı bir kontrendikasyon (risk) bulunamadı."
         }
         
-    risk_data = check_res[0]
     return {
         "drug_name": drug_name,
-        "active_ingredient": active_ingredient,
+        "active_ingredient": row.active_ingredient,
         "icd10_code": icd10_code,
-        "disease_name": risk_data.disease_name,
-        "risk_status": risk_data.risk_level, # Örn: Major, Moderate
-        "warning": risk_data.warning_message
+        "disease_name": row.disease_name,
+        "risk_status": row.risk_level,
+        "warning": row.warning_message
     }
+
+
+# --- YAPAY ZEKA MODELİ İÇİN ÖNBELLEK (CACHE) SARMALAYICISI ---
+@lru_cache(maxsize=1000)
+def cached_predict(drug_a: str, drug_b: str):
+    """Sık sorgulanan ilaç çiftlerini hafızada tutarak ML modeline tekrar yük bindirmeyi engeller."""
+    sorted_drugs = sorted([drug_a.lower().strip(), drug_b.lower().strip()])
+    result = predict_interaction(sorted_drugs[0], sorted_drugs[1])
+    
+    # Güvenlilık önlemi: confidence alanı None dönebilen modeller için fallback eklenmiştir
+    if isinstance(result, dict) and "confidence" in result:
+        if result["confidence"] is None:
+            result["confidence"] = 0.0
+            
+    return result
+
+
+# --- YAPAY ZEKA DESTEKLİ ETKİLEŞİM ENDPOINT'İ ---
+@router.get("/check-ai-interaction/{drug_a}/{drug_b}")
+def check_ai_drug_interaction(drug_a: str, drug_b: str):
+    """İki ilaç arasındaki etkiyi Yapay Zeka (ML) Modeli ile analiz eder."""
+    
+    if drug_a.lower().strip() == drug_b.lower().strip():
+        raise HTTPException(status_code=400, detail="Aynı ilaç birbiriyle karşılaştırılamaz.")
+        
+    try:
+        ai_result = cached_predict(drug_a, drug_b)
+        return {
+            "status": "success",
+            "interaction_analysis": ai_result
+        }
+    except Exception as e:
+        logger.error(f"Yapay Zeka Analiz Hatası: {str(e)}")
+        raise HTTPException(status_code=500, detail="Model analizi sırasında bir sunucu hatası oluştu.")

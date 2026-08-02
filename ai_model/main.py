@@ -1,7 +1,8 @@
 import os
+import csv
 from fastapi import FastAPI, HTTPException
 from google.cloud import bigquery
-from drugsense.routes import drugs, doctor, pharmacist, patient, emergency
+from ai_model.routes import drugs, doctor, pharmacist, patient, emergency
 from datetime import datetime, timezone
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,17 +14,17 @@ bq_client = bigquery.Client()
 PROJECT_ID = bq_client.project
 DATASET_ID = "drugsense_dataset"
 
-# 1. ADIM: UYGULAMAYI ÖNCE BURADA TANIMLIYORUZ (YUKARI TAŞIDIK)
+# 1. ADIM: UYGULAMAYI ÖNCE BURADA TANIMLIYORUZ
 app = FastAPI(
     title="DrugSense - Klinik Karar Destek Sistemi API",
     description="Yapay zeka destekli çok boyutlu klinik karar destek ve akıllı reçeteleme sistemi.",
     version="1.0.0"
 )
 
-# 2. ADIM: CORS MIDDLEWARE EKLİYORUZ (Frontend "Load Failed" Hatasını Çözer)
+# 2. ADIM: CORS MIDDLEWARE EKLİYORUZ
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Geliştirme aşamasında her yerden gelen isteklere izin veriyoruz
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -37,7 +38,7 @@ class SideEffectReport(BaseModel):
     severity: str
     status: str = "İnceleniyor"
 
-# Router'ları ekliyoruz
+# Router'ları ekliyoruz (Emergency rotasındaki prefix kaldırıldı)
 app.include_router(doctor.router, prefix="/doctor", tags=["Doctor"])
 app.include_router(drugs.router, prefix="/drugs", tags=["Drugs"])
 app.include_router(pharmacist.router, prefix="/pharmacist", tags=["Pharmacist"])
@@ -92,7 +93,6 @@ def search_drug(drug_name: str):
 async def create_report(report: SideEffectReport):
     """Hastaların veya hekimlerin bildirdiği yan etkileri BigQuery audit/report tablosuna işler."""
     
-    # Sabit ID yerine dinamik PROJECT_ID kullanıyoruz
     table_id = f"{PROJECT_ID}.{DATASET_ID}.side_effect_reports"
     
     row_to_insert = [
@@ -115,38 +115,70 @@ async def create_report(report: SideEffectReport):
         raise HTTPException(status_code=500, detail=f"Kayıt eklenirken hata oluştu: {errors}")
 
 
-# --- LOGİN SİSTEMİ (users.csv Entegrasyonu) ---
+# --- DİNAMİK LOGİN SİSTEMİ (users.csv Entegrasyonu) ---
+
 
 class LoginRequest(BaseModel):
     tc_no: str
     password: str
-
-# users.csv verilerinin Backend'deki karşılığı
-USERS_DB = {
-    "11111111111": {"full_name": "Dr. Ayşe Yılmaz", "role": "doctor", "password_hash": "hash123"},
-    "22222222222": {"full_name": "Ecz. Ali Kaya", "role": "pharmacist", "password_hash": "hash123"},
-    "44444444444": {"full_name": "Paramedik Fatma Şahin", "role": "paramedic", "password_hash": "hash123"},
-    "12345678901": {"full_name": "Hasta Ahmet Demir", "role": "patient", "password_hash": "hash123"},
-    "98765432109": {"full_name": "Hasta Elif Yücel", "role": "patient", "password_hash": "hash123"},
-    "55555555555": {"full_name": "Hasta Yaşar Gök", "role": "patient", "password_hash": "hash123"},
-}
+    role: str = "patient"
 
 @app.post("/login")
 def login(req: LoginRequest):
-    user = USERS_DB.get(req.tc_no)
+    tc = req.tc_no.strip()
+    selected_role = req.role.strip().lower()
     
+    # KESİN ÇÖZÜM: users.csv dosyasının olabileceği tüm yolları tarıyoruz
+    possible_paths = [
+        "ai_model/data/users.csv", 
+        "data/users.csv", 
+        "ai_model/users.csv", 
+        "users.csv"
+    ]
+    
+    csv_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            csv_path = path
+            break
+
+    user = None
+    if csv_path:
+        with open(csv_path, mode="r", encoding="utf-8") as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                if row["tc_no"].strip() == tc:
+                    user = row
+                    break
+
+    # Eğer CSV dosyasında bu TC gerçekten yoksa varsayılan isim ata
     if not user:
-        raise HTTPException(status_code=401, detail="Bu TC numarasına ait kullanıcı bulunamadı.")
-    
-    # Şifre kontrolü: "test1234" genel test şifresini veya kullanıcının kendi hash'ini kabul ediyoruz
-    if req.password != "test1234" and req.password != user["password_hash"]:
+        user = {
+            "full_name": f"Kayıtsız Kullanıcı ({tc})",
+            "role": selected_role.upper(),
+            "password_hash": "hash123"
+        }
+
+    # Şifre kontrolü
+    if req.password != "test1234" and req.password != user.get("password_hash", "hash123"):
         raise HTTPException(status_code=401, detail="Hatalı şifre girdiniz.")
 
-    # React arayüzünün beklediği formatta veriyi dönüyoruz
+    # CSV'deki rolü okuma
+    db_role = user.get("role", "PATIENT").upper()
+    role_mapping = {
+        "DOCTOR": "doctor",
+        "PHARMACIST": "pharmacist",
+        "PARAMEDIC": "paramedic",
+        "PATIENT": "patient"
+    }
+    actual_role = role_mapping.get(db_role, "patient")
+
+    final_role = selected_role if selected_role in ["doctor", "pharmacist", "patient", "paramedic"] else actual_role
+
     return {
-        "role": user["role"], 
+        "role": final_role, 
         "user_data": {
-            "name": user["full_name"], 
-            "tc_no": req.tc_no
+            "name": user.get("full_name"), # Artık CSV'deki "Dr. Mehmet Özkan" ismini direkt çekecek!
+            "tc_no": tc
         }
     }

@@ -142,7 +142,7 @@ function Logo() {
   );
 }
 
-function Navbar({ onEnterPortal }) {
+function Navbar({ onEnterPortal, onEmergency }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -163,6 +163,7 @@ function Navbar({ onEnterPortal }) {
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
         <Logo />
+        
         <div className="hidden items-center gap-8 md:flex">
           {NAV_LINKS.map((link) => (
             <a
@@ -174,7 +175,17 @@ function Navbar({ onEnterPortal }) {
             </a>
           ))}
         </div>
-        <div className="hidden md:block">
+
+        <div className="hidden md:flex items-center gap-3">
+          {/* YENİ: Acil Durum Butonu */}
+          <button
+            onClick={onEmergency}
+            className="group inline-flex items-center gap-2 rounded-full border border-rose-400/30 bg-rose-500/10 px-5 py-2 text-sm font-semibold text-rose-200 transition-all hover:border-rose-400/60 hover:bg-rose-500/20 hover:text-white"
+          >
+            <Ambulance className="h-4 w-4" />
+            Acil Giriş
+          </button>
+          
           <button
             onClick={onEnterPortal}
             className="group inline-flex items-center gap-2 rounded-full border border-sky-400/30 bg-sky-500/10 px-5 py-2 text-sm font-semibold text-sky-200 transition-all hover:border-sky-400/60 hover:bg-sky-500/20 hover:text-white"
@@ -183,6 +194,7 @@ function Navbar({ onEnterPortal }) {
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </button>
         </div>
+
         <button
           onClick={() => setOpen((v) => !v)}
           className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-slate-300 md:hidden"
@@ -191,6 +203,8 @@ function Navbar({ onEnterPortal }) {
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </nav>
+
+      {/* Mobil Menü */}
       {open && (
         <div className="border-t border-white/5 bg-slate-950/95 px-6 py-4 backdrop-blur-xl md:hidden">
           <div className="flex flex-col gap-3">
@@ -204,16 +218,29 @@ function Navbar({ onEnterPortal }) {
                 {link.label}
               </a>
             ))}
-            <button
-              onClick={() => {
-                setOpen(false);
-                onEnterPortal();
-              }}
-              className="mt-2 inline-flex items-center justify-center gap-2 rounded-full border border-sky-400/30 bg-sky-500/10 px-5 py-2.5 text-sm font-semibold text-sky-200"
-            >
-              Portala Gir
-              <ArrowRight className="h-4 w-4" />
-            </button>
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  onEmergency();
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-rose-400/30 bg-rose-500/10 px-5 py-2.5 text-sm font-semibold text-rose-200"
+              >
+                <Ambulance className="h-4 w-4" />
+                Acil Giriş (Kırmızı Kod)
+              </button>
+              
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  onEnterPortal();
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-sky-400/30 bg-sky-500/10 px-5 py-2.5 text-sm font-semibold text-sky-200"
+              >
+                Portala Gir
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -221,7 +248,7 @@ function Navbar({ onEnterPortal }) {
   );
 }
 
-function Hero({ onEnterPortal }) {
+function Hero({ onEnterPortal, onEmergency }) {
   return (
     <section className="relative overflow-hidden pt-36 pb-24 lg:pt-44 lg:pb-32">
       {/* Ambient glow */}
@@ -275,13 +302,15 @@ function Hero({ onEnterPortal }) {
               Portala Gir
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </button>
-            <a
-              href="#features"
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-7 py-3.5 text-base font-medium text-slate-200 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
+            
+            {/* YENİ: Hero Acil Durum Butonu */}
+            <button
+              onClick={onEmergency}
+              className="group inline-flex items-center gap-2 rounded-full border border-rose-500/40 bg-rose-500/10 px-7 py-3.5 text-base font-medium text-rose-200 backdrop-blur-sm transition-all hover:border-rose-500/60 hover:bg-rose-500/20"
             >
-              Platformu Keşfet
-              <ChevronRight className="h-4 w-4" />
-            </a>
+              <Ambulance className="h-4 w-4" />
+              Paramedik Acil Erişim
+            </button>
           </div>
 
           {/* Stats strip */}
@@ -531,7 +560,7 @@ function Security({ onEnterPortal }) {
   );
 }
 
-function Footer({ onEnterPortal }) {
+function Footer({ onEnterPortal, onEmergency }) {
   return (
     <footer className="border-t border-white/5 bg-slate-950">
       <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
@@ -542,13 +571,23 @@ function Footer({ onEnterPortal }) {
               Parçalanmış sağlık verisini kurumlar arası daha güvenli reçeteler için
               birleştiren yapay zeka destekli Klinik Karar Destek Sistemi.
             </p>
-            <button
-              onClick={onEnterPortal}
-              className="group mt-5 inline-flex items-center gap-2 rounded-full border border-sky-400/30 bg-sky-500/10 px-5 py-2 text-sm font-semibold text-sky-200 transition-all hover:border-sky-400/60 hover:bg-sky-500/20 hover:text-white"
-            >
-              Portala Gir
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </button>
+            <div className="flex items-center gap-3 mt-5">
+              <button
+                onClick={onEnterPortal}
+                className="group inline-flex items-center gap-2 rounded-full border border-sky-400/30 bg-sky-500/10 px-5 py-2 text-sm font-semibold text-sky-200 transition-all hover:border-sky-400/60 hover:bg-sky-500/20 hover:text-white"
+              >
+                Portala Gir
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </button>
+              
+              <button
+                onClick={onEmergency}
+                className="group inline-flex items-center gap-2 rounded-full border border-rose-400/30 bg-rose-500/10 px-5 py-2 text-sm font-semibold text-rose-200 transition-all hover:border-rose-400/60 hover:bg-rose-500/20 hover:text-white"
+              >
+                <Ambulance className="h-4 w-4" />
+                Acil Erişim
+              </button>
+            </div>
           </div>
           <div>
             <h4 className="text-sm font-semibold text-white">Platform</h4>
@@ -586,18 +625,19 @@ function Footer({ onEnterPortal }) {
   );
 }
 
-export default function LandingPage({ onEnterPortal = () => {} }) {
+// Ana Bileşene (LandingPage) onEmergency prop'u eklendi
+export default function LandingPage({ onEnterPortal = () => {}, onEmergency = () => {} }) {
   return (
     <div className="min-h-screen bg-slate-950 text-white antialiased selection:bg-sky-500/30">
-      <Navbar onEnterPortal={onEnterPortal} />
+      <Navbar onEnterPortal={onEnterPortal} onEmergency={onEmergency} />
       <main>
-        <Hero onEnterPortal={onEnterPortal} />
+        <Hero onEnterPortal={onEnterPortal} onEmergency={onEmergency} />
         <Features />
         <Audience />
         <Platform />
         <Security onEnterPortal={onEnterPortal} />
       </main>
-      <Footer onEnterPortal={onEnterPortal} />
+      <Footer onEnterPortal={onEnterPortal} onEmergency={onEmergency} />
     </div>
   );
 }

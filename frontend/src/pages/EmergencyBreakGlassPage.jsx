@@ -83,16 +83,15 @@ export default function EmergencyBreakGlassPortal() {
     setAccessLog(null);
 
     try {
-      const res = await fetch("http://localhost:8000/break-glass", {
+      const res = await fetch("http://localhost:8000/emergency/break-glass", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paramedic_tc: paramedicTc,
-          patient_tc: patientTc,
+          tc_no: patientTc,
           reason: effectiveReason,
         }),
       });
-
       if (!res.ok) {
         let msg = `Sunucu hatası (HTTP ${res.status})`;
         try {

@@ -1,272 +1,315 @@
-from fastapi import APIRouter, HTTPException
-from ..database import bq_client
-from google.cloud import bigquery
-from .patient import get_patient_profile
-from .drugs import get_muadiller
-
-# Tüm güvenlik fonksiyonlarını doctor modülünden çekiyoruz (Modüler yapı harika fikir!)
-from .doctor import (
-    get_bulk_drug_ingredients, 
-    get_bulk_interactions, 
-    check_drug_disease_contraindications,
-    check_food_interactions,
-    check_therapeutic_duplication,
-    check_age_warnings
-)
 import logging
+from functools import lru_cache
+from typing import Optional, List
+from fastapi import APIRouter, HTTPException, Query
+from google.cloud import bigquery
 
-router = APIRouter()
+from ..database import bq_client
+from ..models import MuadilResponse
 
-PROJECT_ID = bq_client.project
-DATASET_ID = "drugsense_dataset"
+# Hasta profilini çekebilmek için mevcut patient modülünü içe aktarıyoruz
+try:
+    from .patient import get_patient_profile
+except ImportError:
+    pass
+
 logger = logging.getLogger(__name__)
 
+# Çift prefix (double prefix) hatasını önlemek için /pharmacist öneki kaldırıldı
+router = APIRouter(
+    tags=["Eczacı Paneli"]
+)
 
-# ------------------------
-# ECZACI GÜVENLİK KONTROLÜ
-# ------------------------
+PROJECT_ID = bq_client.project if bq_client else "default_project"
+DATASET_ID = "drugsense_dataset"
 
-@router.get("/check-safety/{patient_id}/{drug_name}")
-def check_safety(patient_id: str, drug_name: str):
-    """Eczacının reçetesiz ilaç satışı veya muadil değişimi sırasındaki güvenlik duvarı."""
 
-    try:
-        patient = get_patient_profile(patient_id)
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Hasta profili çekilirken hata: {e}")
-        raise HTTPException(status_code=500, detail="Hasta profili alınamadı.")
-
-    # 1. Hastanın mevcut ilaçları ve yeni ilaç için etken maddeleri toplu olarak çekiyoruz
-    patient_drug_names = [med.drug_name for med in patient.active_medications]
-    all_drugs_to_check = patient_drug_names + [drug_name]
-
-    ingredients_dict = get_bulk_drug_ingredients(all_drugs_to_check)
-    new_ing = ingredients_dict.get(drug_name.lower())
-
-    # DÜZELTME: 404 fırlatmak yerine "MANUAL_REVIEW" dönüyoruz ki frontend çökmesin!
-    if not new_ing:
-        return {
-            "patient": patient.full_name,
-            "patient_age": patient.age,
-            "drug": drug_name,
-            "status": "MANUAL_REVIEW",
-            "polypharmacy": len(patient.active_medications) >= 5,
-            "warnings": ["Sistem bu ilacı/etken maddeyi tanımadı."],
-            "disease_warnings": [],
-            "food_warnings": [],
-            "interactions": [],
-            "alternatives": [],
-            "recommendation": "Lütfen prospektüsü manuel kontrol edin veya hekime danışın."
-        }
-
-    report = {
-        "patient": patient.full_name,
-        "patient_age": patient.age,
-        "drug": drug_name,
-        "status": "SAFE",
-        "polypharmacy": len(patient.active_medications) >= 5,
-        "warnings": [],
-        "disease_warnings": [],
-        "food_warnings": [],
-        "interactions": [],
-        "alternatives": [],
-        "recommendation": "İlaç güvenle teslim edilebilir."
-    }
-
-    # Polifarmasi
-    if report["polypharmacy"]:
-        report["warnings"].append(
-            "Hastada polifarmasi riski bulunmaktadır (5 veya daha fazla aktif ilaç kullanımı)."
-        )
-
-    # 2. AYNI GRUP İLAÇ (DUPLİKASYON) KONTROLÜ
-    patient_ings = [
-        ingredients_dict.get(drug.lower()) 
-        for drug in patient_drug_names 
-        if ingredients_dict.get(drug.lower())
-    ]
-    is_duplicated = check_therapeutic_duplication(new_ing, patient_ings)
-    if is_duplicated:
-        report["status"] = "WARNING"
-        report["warnings"].append("DUPLİKASYON UYARISI: Hasta halihazırda bu etken maddeyi içeren bir ilaç kullanmaktadır.")
-
-    # 3. YAŞ - DOZAJ KONTROLÜ
-    if patient.age:
-        age_warning = check_age_warnings(new_ing, patient.age)
-        if age_warning:
-            if "KRİTİK" in age_warning:
-                report["status"] = "CRITICAL"
-            elif report["status"] != "CRITICAL":
-                report["status"] = "WARNING"
-            report["warnings"].append(age_warning)
-
-    # 4. ALERJİ KONTROLÜ
-    for allergy in patient.allergies:
-        if allergy.allergen_name.lower() in new_ing.lower():
-            report["status"] = "CRITICAL"
-            report["warnings"].append(
-                f"KRİTİK: {allergy.allergen_name} alerjisi tespit edildi!"
-            )
-
-    # 5. İLAÇ - HASTALIK (KONTRENDİKASYON) KONTROLÜ
-    disease_conflicts = check_drug_disease_contraindications(new_ing, patient.diseases)
-    for conflict in disease_conflicts:
-        level = conflict["level"].strip().capitalize()
-        warning_text = f"Hastalık Çatışması ({conflict['disease_name']}): {conflict['warning']}"
-        report["disease_warnings"].append(warning_text)
+# ==========================================
+# YAPAY ZEKA MODELİ ENTEGRASYONU & VİZYON
+# ==========================================
+try:
+    from ai_model.api.predict import predict_interaction
+    AI_MODELS_LOADED = True
+except ImportError as e:
+    logger.critical(f"YAPAY ZEKA MODELLERİ YÜKLENEMEDİ! Fallback devrede. Hata: {e}")
+    AI_MODELS_LOADED = False
+    
+    def predict_interaction(drug_a: str, drug_b: str) -> dict:
+        return {"risk_level": "Unknown", "mechanism": "AI Model yüklenemedi.", "method": "Fallback"}
+    
+    def rank_alternatives_by_safety(drugs: list, context: list) -> list:
+        return drugs
         
-        if level == "Major":
-            report["status"] = "CRITICAL"
-            if warning_text not in report["warnings"]:
-                report["warnings"].append(warning_text)
-        elif level == "Moderate":
-            if report["status"] != "CRITICAL":
-                report["status"] = "WARNING"
-            if warning_text not in report["warnings"]:
-                report["warnings"].append(warning_text)
-
-    # 6. İLAÇ - BESİN ETKİLEŞİMİ KONTROLÜ (Eczacı hastayı doğrudan uyarır)
-    food_interactions = check_food_interactions(new_ing)
-    for fw in food_interactions:
-        food_level = fw['level'].strip().capitalize()
-        food_text = f"Besin Etkileşimi [{food_level}] ({fw['food']}): {fw['message']}"
-        report["food_warnings"].append(food_text)
-        
-        if food_level == "Major":
-            if report["status"] != "CRITICAL":
-                report["status"] = "WARNING" 
-        
-        report["warnings"].append(food_text)
-
-    # 7. ETKİLEŞİM KONTROLÜ (İlaç-İlaç)
-    interactions_dict = get_bulk_interactions(new_ing, patient_ings)
-
-    for med in patient.active_medications:
-        med_ing = ingredients_dict.get(med.drug_name.lower())
-        if not med_ing:
-            continue
-
-        level = interactions_dict.get(med_ing.lower())
-        if not level:
-            continue
-
-        level = level.strip().capitalize()
-        report["interactions"].append({
-            "drug": med.drug_name,
-            "level": level
-        })
-
-        if level == "Major":
-            report["status"] = "CRITICAL"
-            warn_msg = f"{med.drug_name} ile Major etkileşim bulundu."
-            if warn_msg not in report["warnings"]:
-                report["warnings"].append(warn_msg)
-        elif level == "Moderate":
-            if report["status"] != "CRITICAL":
-                report["status"] = "WARNING"
-            warn_msg = f"{med.drug_name} ile Moderate etkileşim bulundu."
-            if warn_msg not in report["warnings"]:
-                report["warnings"].append(warn_msg)
-
-    # 8. Muadil Önerisi ve Final Karar
-    if report["status"] == "CRITICAL":
-        try:
-            muadil = get_muadiller(drug_name)
-            report["alternatives"] = muadil.alternative_drugs
-            report["recommendation"] = "DİKKAT: İlaç satışı risklidir! Güvenli bir muadil değerlendirilmeli veya hekime danışılmalıdır."
-        except Exception:
-            report["recommendation"] = "Muadil bulunamadı. Lütfen ilacı teslim etmeden önce reçete eden hekim ile iletişime geçiniz."
-
-    elif report["status"] == "WARNING":
-        report["recommendation"] = "İlaç verilebilir ancak olası yan etkiler, diyet kuralları ve yaş uyarıları konusunda hastaya detaylı danışmanlık verilmelidir."
-
-    return report
+    def predict_disease_complication(ingredient: str, icd10: str) -> dict:
+        return {"ai_risk_score": 0.0}
 
 
-# --- 1. AKTİF REÇETELERİ LİSTELEME ENDPOINT'İ ---
-@router.get("/active-prescriptions/{patient_tc}")
-def get_active_prescriptions(patient_tc: str):
-    """Eczacının, hastanın henüz alınmamış aktif reçetelerini görmesini sağlar."""
-    if bq_client is None:
+# ==========================================
+# VERİTABANI YARDIMCI FONKSİYONU
+# ==========================================
+def execute_bq_query(query: str, parameters: list) -> list:
+    """BigQuery sorgularını tek merkezden yönetmek, loglamak ve hataları yakalamak için."""
+    if not bq_client:
         raise HTTPException(status_code=500, detail="BigQuery bağlantısı kurulamadı.")
+    
+    job_config = bigquery.QueryJobConfig(query_parameters=parameters)
+    try:
+        return list(bq_client.query(query, job_config=job_config).result())
+    except Exception as e:
+        logger.error(f"BigQuery Sorgu Hatası: {e}")
+        raise HTTPException(status_code=500, detail="Veritabanı işlemi sırasında hata oluştu.")
 
-    # PENDING yerine sistemin atadığı onaylı statüleri arıyoruz ve doktor adını JOIN ile çekiyoruz
-    query = f"""
-        SELECT p.prescription_id, p.doctor_tc_no, p.drug_name, p.status, p.created_at, u.full_name as doctor_name
-        FROM `{PROJECT_ID}.{DATASET_ID}.prescriptions` p
-        LEFT JOIN `{PROJECT_ID}.{DATASET_ID}.users` u ON CAST(p.doctor_tc_no AS STRING) = CAST(u.tc_no AS STRING)
-        WHERE CAST(p.patient_tc_no AS STRING) = @patient_tc
-          AND p.status IN ('SAFE', 'WARNING', 'OVERRIDDEN_BY_DOCTOR')
-        ORDER BY p.created_at DESC
+
+# ==========================================
+# BÖLÜM 1: MEVCUT İLAÇ VE AI SERVİSLERİ (/drugs/...)
+# ==========================================
+
+@router.get("/drugs/get-muadiller/{drug_name}", response_model=MuadilResponse)
+def get_muadiller(
+    drug_name: str, 
+    patient_cart: Optional[str] = Query(None, description="Opsiyonel: Akıllı sıralama için sepetteki mevcut ilaçlar")
+):
+    query_ing = f"SELECT active_ingredient FROM `{PROJECT_ID}.{DATASET_ID}.drugs` WHERE LOWER(drug_name) = @drug_name LIMIT 1"
+    res_ing = execute_bq_query(query_ing, [bigquery.ScalarQueryParameter("drug_name", "STRING", drug_name.lower())])
+    
+    if not res_ing:
+        raise HTTPException(status_code=404, detail="İlaç bulunamadı.")
+    
+    active_ingredient = res_ing[0].active_ingredient
+    
+    query_alt = f"""
+        SELECT drug_name FROM `{PROJECT_ID}.{DATASET_ID}.drugs`
+        WHERE LOWER(active_ingredient) = @active_ingredient AND LOWER(drug_name) != @drug_name
     """
-    job_config = bigquery.QueryJobConfig(
-        query_parameters=[bigquery.ScalarQueryParameter("patient_tc", "STRING", patient_tc)]
+    res_alt = execute_bq_query(query_alt, [
+        bigquery.ScalarQueryParameter("active_ingredient", "STRING", active_ingredient.lower()),
+        bigquery.ScalarQueryParameter("drug_name", "STRING", drug_name.lower())
+    ])
+    
+    alternative_drugs = [row.drug_name for row in res_alt]
+
+    if not alternative_drugs:
+        raise HTTPException(status_code=404, detail="Aynı etken maddeye sahip başka ilaç bulunamadı.")
+
+    if patient_cart and AI_MODELS_LOADED:
+        try:
+            cart_list = [d.strip().lower() for d in patient_cart.split(",")]
+            alternative_drugs = rank_alternatives_by_safety(alternative_drugs, cart_list)
+        except Exception as e:
+            logger.warning(f"Akıllı sıralama çalıştırılamadı, standart liste dönülüyor: {e}")
+    
+    return MuadilResponse(
+        original_drug=drug_name,
+        active_ingredient=active_ingredient,
+        alternative_drugs=alternative_drugs
     )
+
+
+@router.get("/drugs/check-drug-disease/{drug_name}/{icd10_code}")
+def check_drug_disease_risk(drug_name: str, icd10_code: str):
+    query = f"""
+        SELECT d.active_ingredient, dd.disease_name, dd.risk_level, dd.warning_message
+        FROM `{PROJECT_ID}.{DATASET_ID}.drugs` d
+        LEFT JOIN `{PROJECT_ID}.{DATASET_ID}.drug_diseases` dd
+          ON LOWER(d.active_ingredient) = LOWER(dd.active_ingredient)
+         AND UPPER(dd.icd10_code) = UPPER(@icd10_code)
+        WHERE LOWER(d.drug_name) = LOWER(@drug_name)
+        LIMIT 1
+    """
+    res = execute_bq_query(query, [
+        bigquery.ScalarQueryParameter("drug_name", "STRING", drug_name.lower()),
+        bigquery.ScalarQueryParameter("icd10_code", "STRING", icd10_code)
+    ])
     
-    rows = bq_client.query(query, job_config=job_config).result()
+    if not res:
+        raise HTTPException(status_code=404, detail="İlaç veritabanında bulunamadı.")
+        
+    row = res[0]
+    active_ing = row.active_ingredient
     
-    prescriptions = [
-        {
-            "prescription_id": row.prescription_id,
-            "doctor_tc_no": row.doctor_tc_no,
-            "doctor_name": row.doctor_name or "Bilinmeyen Hekim",
-            "drug_name": row.drug_name,
-            "status": row.status,
-            "created_at": str(row.created_at)
+    if row.risk_level:
+        return {
+            "drug_name": drug_name,
+            "active_ingredient": active_ing,
+            "icd10_code": icd10_code,
+            "disease_name": row.disease_name,
+            "risk_status": row.risk_level,
+            "source": "Database",
+            "warning": row.warning_message
         }
-        for row in rows
-    ]
+        
+    try:
+        ai_analysis = predict_disease_complication(active_ing, icd10_code)
+        if ai_analysis.get("ai_risk_score", 0) > 75.0:
+            return {
+                "drug_name": drug_name,
+                "icd10_code": icd10_code,
+                "risk_status": "POTENTIAL_WARNING",
+                "source": "AI_Prediction",
+                "warning": f"Model %{ai_analysis['ai_risk_score']} oranında olası bir komplikasyon tespit etti."
+            }
+    except Exception:
+        pass
 
     return {
-        "patient_tc": patient_tc,
-        "active_prescriptions_count": len(prescriptions),
-        "prescriptions": prescriptions
+        "drug_name": drug_name,
+        "active_ingredient": active_ing,
+        "icd10_code": icd10_code,
+        "risk_status": "SAFE",
+        "source": "Database",
+        "warning": "Kayıtlı bir kontrendikasyon bulunamadı."
+    }
+
+@lru_cache(maxsize=1000)
+def cached_predict(drug_a: str, drug_b: str) -> dict:
+    sorted_drugs = sorted([drug_a.lower(), drug_b.lower()])
+    try:
+        return predict_interaction(sorted_drugs[0], sorted_drugs[1])
+    except Exception as e:
+        return {"risk_level": "Unknown", "mechanism": f"Hata: {e}"}
+
+@router.get("/drugs/check-ai-interaction/{drug_a}/{drug_b}")
+def check_ai_drug_interaction(drug_a: str, drug_b: str):
+    if drug_a.lower().strip() == drug_b.lower().strip():
+        raise HTTPException(status_code=400, detail="Aynı ilaç birbiriyle karşılaştırılamaz.")
+    return {"status": "success", "interaction_analysis": cached_predict(drug_a, drug_b)}
+
+
+# ==========================================
+# BÖLÜM 2: REACT FRONTEND İÇİN ECZACI SERVİSLERİ (/pharmacist/...)
+# ==========================================
+
+@router.get("/active-prescriptions/{tc_no}")
+def get_active_prescriptions(tc_no: str):
+    """React Dashboard'un beklediği formatta hastanın aktif reçetelerini döndürür."""
+    # DÜZELTME: patient_tc_no yerine güncel tablo kolonu olan tc_no kullanıldı.
+    query = f"""
+        SELECT p.prescription_id, p.drug_name, p.status, p.created_at, u.full_name as doctor_name
+        FROM `{PROJECT_ID}.{DATASET_ID}.prescriptions` p
+        LEFT JOIN `{PROJECT_ID}.{DATASET_ID}.users` u ON CAST(p.doctor_tc_no AS STRING) = CAST(u.tc_no AS STRING)
+        WHERE CAST(p.tc_no AS STRING) = @tc_no 
+        ORDER BY p.created_at DESC
+    """
+    res = execute_bq_query(query, [bigquery.ScalarQueryParameter("tc_no", "STRING", tc_no)])
+    
+    prescriptions = []
+    for row in res:
+        prescriptions.append({
+            "prescription_id": row.prescription_id,
+            "drug_name": row.drug_name,
+            "status": row.status,
+            "created_at": str(row.created_at),
+            "doctor_name": row.doctor_name or "Bilinmeyen Hekim"
+        })
+        
+    return {"prescriptions": prescriptions}
+
+
+@router.get("/check-safety/{tc_no}/{drug_name}")
+def check_pharmacist_safety(tc_no: str, drug_name: str):
+    """React Dashboard'daki yapay zeka analiz raporunu tam formatında besleyen kapsamlı güvenlik kontrolü."""
+    try:
+        patient = get_patient_profile(tc_no)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Hasta profili bulunamadı.")
+        
+    query_ing = f"SELECT active_ingredient FROM `{PROJECT_ID}.{DATASET_ID}.drugs` WHERE LOWER(drug_name) = LOWER(@drug) LIMIT 1"
+    res_ing = execute_bq_query(query_ing, [bigquery.ScalarQueryParameter("drug", "STRING", drug_name)])
+    
+    if not res_ing:
+        return {
+            "status": "MANUAL_REVIEW",
+            "recommendation": "İlaç (veya etken madde) veritabanında bulunamadı. Lütfen manuel inceleme yapın.",
+            "disease_warnings": [], "food_warnings": [], "interactions": [], "warnings": []
+        }
+        
+    new_ing = res_ing[0].active_ingredient.lower()
+    
+    disease_warnings, food_warnings, interactions, general_warnings = [], [], [], []
+    status_rank = 0  # 0: SAFE, 1: WARNING, 2: CRITICAL
+    
+    # 1. Alerji Kontrolü
+    for allergy in patient.allergies:
+        if allergy.allergen_name.lower() in new_ing:
+            general_warnings.append(f"KRİTİK ALERJİ: {allergy.allergen_name} alerjisi tespit edildi!")
+            status_rank = max(status_rank, 2)
+            
+    # 2. Hastalık Kontrolü
+    disease_codes = [d.icd10_code for d in patient.diseases if hasattr(d, 'icd10_code')]
+    if disease_codes:
+        query_dis = f"""
+            SELECT disease_name, risk_level, warning_message
+            FROM `{PROJECT_ID}.{DATASET_ID}.drug_diseases`
+            WHERE LOWER(active_ingredient) = @new_ing AND icd10_code IN UNNEST(@disease_codes)
+        """
+        dis_params = [
+            bigquery.ScalarQueryParameter("new_ing", "STRING", new_ing),
+            bigquery.ArrayQueryParameter("disease_codes", "STRING", disease_codes)
+        ]
+        conflicts = execute_bq_query(query_dis, dis_params)
+        for row in conflicts:
+            level = row.risk_level.strip().capitalize()
+            warning_text = f"Hastalık Çatışması ({row.disease_name}): {row.warning_message}"
+            disease_warnings.append(warning_text)
+            if level == "Major": status_rank = max(status_rank, 2)
+            elif level == "Moderate": status_rank = max(status_rank, 1)
+                
+    # 3. Besin Etkileşimi
+    query_food = f"SELECT interacting_food, risk_level, warning_message FROM `{PROJECT_ID}.{DATASET_ID}.drug_foods` WHERE LOWER(active_ingredient) = @new_ing"
+    for fw in execute_bq_query(query_food, [bigquery.ScalarQueryParameter("new_ing", "STRING", new_ing)]):
+        food_level = fw.risk_level.strip().capitalize()
+        food_warnings.append(f"[{food_level}] {fw.interacting_food}: {fw.warning_message}")
+        if "Major" in food_level: status_rank = max(status_rank, 2)
+            
+    # 4. Yapay Zeka DDI Kontrolü
+    active_meds = [m.drug_name for m in patient.active_medications]
+    if active_meds:
+        query_bulk = f"SELECT LOWER(drug_name) as d_name, LOWER(active_ingredient) as a_ing FROM `{PROJECT_ID}.{DATASET_ID}.drugs` WHERE LOWER(drug_name) IN UNNEST(@drug_list)"
+        bulk_res = execute_bq_query(query_bulk, [bigquery.ArrayQueryParameter("drug_list", "STRING", [d.lower() for d in active_meds])])
+        med_ings = {row.d_name: row.a_ing for row in bulk_res}
+        
+        for med in active_meds:
+            med_ing = med_ings.get(med.lower())
+            if not med_ing or med_ing == new_ing:
+                continue
+                
+            ai_result = cached_predict(new_ing, med_ing)
+            level_str = ai_result.get("risk_level", "").strip().capitalize()
+            
+            if level_str in ["Major", "Moderate"]:
+                interactions.append({
+                    "drug": med,
+                    "level": level_str,
+                    "mechanism": ai_result.get("mechanism", "")
+                })
+                if level_str == "Major": status_rank = max(status_rank, 2)
+                else: status_rank = max(status_rank, 1)
+                    
+    # 5. Sonuç Derleme
+    final_status = "CRITICAL" if status_rank == 2 else "WARNING" if status_rank == 1 else "SAFE"
+    recommendation = "İlaç güvenle teslim edilebilir."
+    if final_status == "CRITICAL":
+        recommendation = "Kritik etkileşim tespit edildi! Reçete reddedilmeli veya hekim onayı alınmalıdır."
+    elif final_status == "WARNING":
+        recommendation = "Orta düzey risk. Hastayı yan etkiler konusunda uyararak teslim ediniz."
+        
+    return {
+        "status": final_status,
+        "recommendation": recommendation,
+        "disease_warnings": disease_warnings,
+        "food_warnings": food_warnings,
+        "interactions": interactions,
+        "warnings": general_warnings
     }
 
 
-# --- 2. İLACI TESLİM ETME (DISPENSED) ENDPOINT'İ ---
 @router.post("/dispense-medication/{prescription_id}")
 def dispense_medication(prescription_id: str):
-    """Eczacı ilacı hastaya teslim ettiğinde reçete durumunu DISPENSED yapar."""
-    if bq_client is None:
-        raise HTTPException(status_code=500, detail="BigQuery bağlantısı kurulamadı.")
-
+    """React Dashboard üzerinden ilacın teslim edildiğini (satışını) veritabanına işler."""
     query = f"""
-        UPDATE `{PROJECT_ID}.{DATASET_ID}.prescriptions`
-        SET status = 'DISPENSED'
-        WHERE prescription_id = @prescription_id
+        UPDATE `{PROJECT_ID}.{DATASET_ID}.prescriptions` 
+        SET status = 'DISPENSED' 
+        WHERE prescription_id = @rx_id
     """
-    job_config = bigquery.QueryJobConfig(
-        query_parameters=[bigquery.ScalarQueryParameter("prescription_id", "STRING", prescription_id)]
-    )
-
-    try:
-        bq_client.query(query, job_config=job_config).result()
-        return {
-            "status": "success",
-            "message": f"{prescription_id} nolu reçete başarıyla teslim edildi (DISPENSED olarak güncellendi)."
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Reçete güncellenemedi: {str(e)}")
-
-@router.get("/search-drug")
-def search_drug(q: str):
-    """Eczacı panelindeki otomatik tamamlama (autocomplete) için ilaç arar."""
-    if not q or len(q) < 2:
-        return []
-        
-    query = f"""
-        SELECT DISTINCT drug_name as name, active_ingredient
-        FROM `{PROJECT_ID}.{DATASET_ID}.drugs`
-        WHERE LOWER(drug_name) LIKE LOWER(@search) 
-           OR LOWER(active_ingredient) LIKE LOWER(@search)
-        LIMIT 10
-    """
-    job_config = bigquery.QueryJobConfig(
-        query_parameters=[bigquery.ScalarQueryParameter("search", "STRING", f"%{q}%")]
-    )
-    res = bq_client.query(query, job_config=job_config).result()
-    
-    return [{"name": row.name, "active_ingredient": row.active_ingredient} for row in res]
+    execute_bq_query(query, [bigquery.ScalarQueryParameter("rx_id", "STRING", prescription_id)])
+    return {"status": "success", "message": f"#{prescription_id} numaralı reçete başarıyla teslim edildi."}

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, FileText, Zap, Clock, Settings, Activity, AlertTriangle, Users, 
   Shield, Bell, LogOut, Search, ChevronRight, Pill, 
-  ArrowRight, HelpCircle, BookOpen, CheckCircle, XCircle, PlusCircle, CheckCircle2
+  ArrowRight, HelpCircle, BookOpen, CheckCircle, XCircle, PlusCircle, CheckCircle2, Plus
 } from 'lucide-react';
 
 function StatusBadge({ status, color }) {
@@ -25,12 +25,17 @@ export default function DoctorDashboard({ user, onLogout }) {
   const [activeNav, setActiveNav] = useState(0);
   
   // Arama ve Hasta State'leri
-  const [searchTc, setSearchTc] = useState('12345678901');
+  const [searchTc, setSearchTc] = useState('');
   const [patientProfile, setPatientProfile] = useState(null);
   const [patientHistory, setPatientHistory] = useState([]);
-  const [pendingSideEffects, setPendingSideEffects] = useState([]); // YENİ: Bekleyen bildirimler
+  const [pendingSideEffects, setPendingSideEffects] = useState([]);
   const [isLoadingPatient, setIsLoadingPatient] = useState(false);
   const [patientError, setPatientError] = useState('');
+
+  // Alerji Ekleme State'leri
+  const [showAllergyForm, setShowAllergyForm] = useState(false);
+  const [allergyForm, setAllergyForm] = useState({ name: '', severity: 'Orta' });
+  const [isAddingAllergy, setIsAddingAllergy] = useState(false);
 
   // Reçete SEPETİ (Cart) State'leri
   const [prescriptionCart, setPrescriptionCart] = useState([]);
@@ -80,6 +85,7 @@ export default function DoctorDashboard({ user, onLogout }) {
     setAiReport(null);
     setNewDrugName('');
     setPrescriptionCart([]); 
+    setShowAllergyForm(false); 
 
     try {
       const profileRes = await fetch(`http://localhost:8000/patient/profile/${searchTc}`);
@@ -87,15 +93,15 @@ export default function DoctorDashboard({ user, onLogout }) {
       const profileData = await profileRes.json();
       setPatientProfile(profileData);
 
-      // YENİ: Bekleyen yan etki bildirimlerini çek
       const pendingRes = await fetch(`http://localhost:8000/patient/pending-side-effects/${searchTc}`);
       if (pendingRes.ok) {
         const pendingData = await pendingRes.json();
-        setPendingSideEffects(pendingData || []);
+        setPendingSideEffects(pendingData.pending_reports || pendingData || []);
       }
 
       if (doctorTc) {
-        const historyRes = await fetch(`http://localhost:8000/doctor/doctor-patient-history/${doctorTc}/${searchTc}`);
+        // HATA DÜZELTİLDİ: '-patient-history' yerine 'patient-history'
+        const historyRes = await fetch(`http://localhost:8000/doctor/patient-history/${doctorTc}/${searchTc}`);
         if (historyRes.ok) {
           const historyData = await historyRes.json();
           setPatientHistory(historyData.filtered_prescriptions || []);
@@ -111,7 +117,6 @@ export default function DoctorDashboard({ user, onLogout }) {
     }
   };
 
-  // YENİ: Doktorun bildirimi onaylayıp hastaya alerji olarak eklemesi
   const handleApproveSideEffect = async (report) => {
     try {
       const res = await fetch(`http://localhost:8000/doctor/approve-side-effect`, {
@@ -129,12 +134,41 @@ export default function DoctorDashboard({ user, onLogout }) {
       if (!res.ok) throw new Error(data.detail || "Onaylama başarısız.");
 
       alert("✅ " + data.message);
-      
-      // Listeyi ve profili güncellemek için hastayı tekrar sorgula
       handleSearchPatient();
 
     } catch (err) {
       alert("Hata: " + err.message);
+    }
+  };
+
+  const handleAddAllergy = async (e) => {
+    e.preventDefault();
+    if (!allergyForm.name) return;
+    setIsAddingAllergy(true);
+
+    try {
+      const res = await fetch(`http://localhost:8000/doctor/add-allergy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient_tc: searchTc,
+          doctor_tc: doctorTc,
+          allergen_name: allergyForm.name,
+          severity: allergyForm.severity
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Alerji eklenemedi.");
+
+      alert("✅ " + data.message);
+      setAllergyForm({ name: '', severity: 'Orta' });
+      setShowAllergyForm(false);
+      handleSearchPatient(); 
+    } catch (err) {
+      alert("Hata: " + err.message);
+    } finally {
+      setIsAddingAllergy(false);
     }
   };
 
@@ -153,7 +187,7 @@ export default function DoctorDashboard({ user, onLogout }) {
     setAnalyzeError('');
 
     try {
-      const response = await fetch('http://localhost:8000/doctor/doctor/prescribe-and-analyze', {
+      const response = await fetch('http://localhost:8000/doctor/prescribe-and-analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -199,7 +233,7 @@ export default function DoctorDashboard({ user, onLogout }) {
     setIsSavingPrescription(true);
 
     try {
-      const response = await fetch('http://localhost:8000/doctor/doctor/save-prescription', {
+      const response = await fetch('http://localhost:8000/doctor/save-prescription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -226,7 +260,6 @@ export default function DoctorDashboard({ user, onLogout }) {
   };
 
   useEffect(() => {
-    if(searchTc) handleSearchPatient();
     fetchDoctorStats();
   }, []);
 
@@ -572,13 +605,56 @@ export default function DoctorDashboard({ user, onLogout }) {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 pl-2">
-                      <div className="bg-rose-50/50 p-4 rounded-xl border border-rose-100">
-                        <span className="text-[10px] font-black text-rose-500 uppercase tracking-wider mb-2 block">Alerjiler</span>
+                      {/* DİNAMİK ALERJİ KUTUSU */}
+                      <div className="bg-rose-50/50 p-4 rounded-xl border border-rose-100 relative">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-[10px] font-black text-rose-500 uppercase tracking-wider block">Alerjiler</span>
+                          <button 
+                            onClick={() => setShowAllergyForm(!showAllergyForm)} 
+                            className="bg-rose-100 text-rose-600 hover:bg-rose-200 hover:text-rose-700 p-1 rounded transition-colors"
+                            title="Yeni Alerji Ekle"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                        
                         {patientProfile.allergies.length > 0 ? (
                           <ul className="text-sm text-rose-900 list-disc pl-4 font-semibold space-y-1">
                             {patientProfile.allergies.map((a, i) => <li key={i}>{a.allergen_name} ({a.severity})</li>)}
                           </ul>
                         ) : <p className="text-xs font-medium text-slate-400">Kayıtlı alerji yok.</p>}
+
+                        {/* YENİ: Alerji Ekleme Formu */}
+                        {showAllergyForm && (
+                          <form onSubmit={handleAddAllergy} className="mt-3 bg-white p-3 rounded-lg border border-rose-200 shadow-sm flex flex-col gap-2 animate-in fade-in zoom-in duration-200 relative z-10">
+                            <input 
+                              type="text" 
+                              placeholder="Örn: Penisilin, Fıstık..." 
+                              value={allergyForm.name}
+                              onChange={(e) => setAllergyForm({...allergyForm, name: e.target.value})}
+                              className="text-xs px-2 py-1.5 border border-slate-200 rounded outline-none focus:border-rose-400 font-medium text-slate-700"
+                              required
+                            />
+                            <select 
+                              value={allergyForm.severity}
+                              onChange={(e) => setAllergyForm({...allergyForm, severity: e.target.value})}
+                              className="text-xs px-2 py-1.5 border border-slate-200 rounded outline-none focus:border-rose-400 font-medium text-slate-700"
+                            >
+                              <option value="Hafif">Hafif (Kızarıklık vb.)</option>
+                              <option value="Orta">Orta (Kaşıntı, Şişlik)</option>
+                              <option value="Şiddetli">Şiddetli (Nefes Darlığı)</option>
+                              <option value="Kritik">Kritik (Anafilaksi)</option>
+                            </select>
+                            <div className="flex gap-2 mt-1">
+                              <button type="submit" disabled={isAddingAllergy} className="flex-1 bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-bold py-1.5 rounded transition-colors disabled:opacity-50">
+                                {isAddingAllergy ? 'Ekleniyor...' : 'Kaydet'}
+                              </button>
+                              <button type="button" onClick={() => setShowAllergyForm(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold py-1.5 rounded transition-colors">
+                                İptal
+                              </button>
+                            </div>
+                          </form>
+                        )}
                       </div>
                       
                       <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100">
@@ -592,7 +668,7 @@ export default function DoctorDashboard({ user, onLogout }) {
                     </div>
                   </div>
 
-                  {/* YENİ: Bekleyen Alerji / Yan Etki Onay Paneli */}
+                  {/* Bekleyen Alerji / Yan Etki Onay Paneli */}
                   {pendingSideEffects.length > 0 && (
                     <div className="bg-amber-50 rounded-2xl border border-amber-200 shadow-sm p-6">
                       <h3 className="text-sm font-black text-amber-900 uppercase tracking-wider mb-3 flex items-center gap-2">

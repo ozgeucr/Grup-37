@@ -79,7 +79,7 @@ function NavItem({ icon: Icon, label, active, onClick, badge }) {
         strokeWidth={2}
       />
       <span className="flex-1 text-left">{label}</span>
-      {badge != null && (
+      {badge != null && badge > 0 && (
         <span className="rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
           {badge}
         </span>
@@ -118,7 +118,8 @@ function StatCard({ icon: Icon, label, value, tone }) {
 
 export default function PharmacistDashboard({ user, onLogout }) {
   const [activeNav, setActiveNav] = useState("panel");
-  const [tcQuery, setTcQuery] = useState("12345678901"); // Test hastası varsayılan
+  // TC numarası varsayılanı boş bırakıldı
+  const [tcQuery, setTcQuery] = useState(""); 
   const [patient, setPatient] = useState(null);
   const [patientError, setPatientError] = useState("");
   const [searching, setSearching] = useState(false);
@@ -126,17 +127,7 @@ export default function PharmacistDashboard({ user, onLogout }) {
   const [manualDrugs, setManualDrugs] = useState([]);
   const [drugInput, setDrugInput] = useState("");
 
-  const [history, setHistory] = useState([
-    {
-      id: "OP-2041",
-      patient: "Ayşe Yılmaz",
-      tc: "10023456780",
-      time: "Bugün 09:42",
-      drugs: 4,
-      result: "Güvenli",
-      source: "Reçete",
-    }
-  ]);
+  const [history, setHistory] = useState([]);
 
   const [activePrescription, setActivePrescription] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -214,8 +205,9 @@ export default function PharmacistDashboard({ user, onLogout }) {
     }
   }
 
+  // OTOMATİK HASTA SORGULAMASI KALDIRILDI
   useEffect(() => {
-    handleSearchPatient();
+    // Component ilk yüklendiğinde otomatik sorgu yapmıyoruz
   }, []);
 
   // 2. ADIM: BACKEND'den GERÇEK ZAMANLI YZ GÜVENLİK ANALİZİ ÇEKME
@@ -512,13 +504,13 @@ export default function PharmacistDashboard({ user, onLogout }) {
                         value={tcQuery}
                         onChange={(e) => setTcQuery(e.target.value.replace(/\D/g, "").slice(0, 11))}
                         onKeyDown={(e) => e.key === "Enter" && handleSearchPatient()}
-                        placeholder="TC Kimlik No (örn. 12345678901)"
+                        placeholder="TC Kimlik No"
                         className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-700 placeholder:text-slate-400 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
                       />
                     </div>
                     <button
                       onClick={handleSearchPatient}
-                      disabled={searching}
+                      disabled={searching || tcQuery.length < 11}
                       className="flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-sky-600/30 transition hover:bg-sky-700 disabled:opacity-60"
                     >
                       {searching ? (
