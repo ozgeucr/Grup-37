@@ -7,4 +7,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    host: 'drugsense.local',
+    port: 5173
+  }
 })
