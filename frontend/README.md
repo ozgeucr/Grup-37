@@ -1,4 +1,4 @@
-# 🚀 DrugSense Frontend - Klinik Karar Destek & Acil Erişim Portalı
+#  DrugSense Frontend - Klinik Karar Destek & Acil Erişim Portalı
 
 DrugSense Frontend, **React**, **Vite** ve **Tailwind CSS** teknolojileri kullanılarak geliştirilmiş modern bir web uygulamasıdır. Sistem; hekimlerin, eczacıların, hastaların ve acil sağlık personelinin güvenli bir şekilde sisteme erişmesini sağlayan rol tabanlı kullanıcı arayüzünü sunmaktadır.
 
@@ -6,9 +6,9 @@ Frontend uygulaması, FastAPI tabanlı backend servisleri ile entegre çalışar
 
 ---
 
-# ✨ Özellikler
+#  Özellikler
 
-## 👨‍⚕️ Doktor Paneli
+##  Doktor Paneli
 
 - Güvenli reçete oluşturma
 - Yapay zekâ destekli ilaç analizi
@@ -23,7 +23,7 @@ Frontend uygulaması, FastAPI tabanlı backend servisleri ile entegre çalışar
 
 ---
 
-## 🚨 Acil Erişim (Break Glass)
+##  Acil Erişim (Break Glass)
 
 Paramediklerin kritik durumlarda hastaya saniyeler içerisinde erişebilmesini sağlayan modüldür.
 
@@ -38,7 +38,7 @@ Paramediklerin kritik durumlarda hastaya saniyeler içerisinde erişebilmesini s
 
 ---
 
-## 💊 Eczacı Paneli
+##  Eczacı Paneli
 
 - Reçete görüntüleme
 - Güvenlik analiz sonuçlarını inceleme
@@ -48,7 +48,7 @@ Paramediklerin kritik durumlarda hastaya saniyeler içerisinde erişebilmesini s
 
 ---
 
-## 👤 Hasta Paneli
+##  Hasta Paneli
 
 - Aktif ilaçlarını görüntüleme
 - Reçete geçmişi
@@ -58,7 +58,7 @@ Paramediklerin kritik durumlarda hastaya saniyeler içerisinde erişebilmesini s
 
 ---
 
-## 🔐 Rol Tabanlı Giriş Sistemi
+##  Rol Tabanlı Giriş Sistemi
 
 Sistem aşağıdaki kullanıcı rollerini desteklemektedir.
 
@@ -71,7 +71,7 @@ Her kullanıcı yalnızca kendi yetkisine ait ekranlara erişebilir.
 
 ---
 
-# 🏗️ Kullanılan Teknolojiler
+#  Kullanılan Teknolojiler
 
 - React
 - Vite
@@ -82,7 +82,7 @@ Her kullanıcı yalnızca kendi yetkisine ait ekranlara erişebilir.
 
 ---
 
-# 📂 Proje Yapısı
+#  Proje Yapısı
 
 ```text
 frontend/
@@ -116,7 +116,7 @@ frontend/
 
 ---
 
-# ⚙️ Kurulum
+#  Kurulum
 
 ## 1. Depoyu Klonlayın
 
@@ -156,7 +156,7 @@ http://drugsense.local:5173/
 
 ---
 
-# 🔗 Backend Entegrasyonu
+#  Backend Entegrasyonu
 
 Frontend uygulaması FastAPI backend'i ile haberleşmektedir.
 
@@ -168,7 +168,7 @@ http://localhost:8000
 
 ---
 
-# 📡 Kullanılan API Endpointleri
+#  Kullanılan API Endpointleri
 
 ## Doktor Analizi
 
@@ -210,7 +210,7 @@ Reçete doğrulama ve ilaç güvenliği analizleri gerçekleştirilir.
 
 ---
 
-# 🎨 Arayüz Özellikleri
+#  Arayüz Özellikleri
 
 - Responsive tasarım
 - Modern kullanıcı deneyimi
@@ -222,7 +222,7 @@ Reçete doğrulama ve ilaç güvenliği analizleri gerçekleştirilir.
 
 ---
 
-# 🚑 Break Glass Modülü
+#  Break Glass Modülü
 
 Bu modül yalnızca **Paramedik** rolüne sahip kullanıcılar tarafından kullanılabilir.
 
@@ -241,7 +241,7 @@ Ayrıca;
 
 ---
 
-# 📌 Notlar
+#  Notlar
 
 - Backend çalışmadan frontend tam olarak işlevsel olmayacaktır.
 - API adresi gerektiğinde `services` klasöründen değiştirilebilir.
